@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "676081925006",
+    "project_id": "catalyst-dance-app",
+    "storage_bucket": "catalyst-dance-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:676081925006:android:2e09a8592870175a9702df",
+        "android_client_info": {
+          "package_name": "com.catalyst"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCB_MBRSTIRpxOBNSNoHVLdyEbHO-zin3o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:676081925006:android:be679410c044289d9702df",
+        "android_client_info": {
+          "package_name": "com.catalyst_admin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCB_MBRSTIRpxOBNSNoHVLdyEbHO-zin3o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:676081925006:android:d05063bc94b5ebbe9702df",
+        "android_client_info": {
+          "package_name": "com.catalyst_instructor"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCB_MBRSTIRpxOBNSNoHVLdyEbHO-zin3o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
