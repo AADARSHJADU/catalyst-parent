@@ -3,7 +3,6 @@ import 'package:catalyst/core/constants/app_colors.dart';
 import 'package:catalyst/core/widgets/app_card.dart';
 import 'package:catalyst/data/models/models.dart';
 import 'package:catalyst/modules/main/controllers/main_controller.dart';
-import 'package:catalyst/modules/private_lessons/controllers/private_lessons_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -117,16 +116,8 @@ class InstructorDetailView extends GetView<ScheduleController> {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () {
-                  // Ensure PrivateLessonsController is available
-                  if (!Get.isRegistered<PrivateLessonsController>()) {
-                    Get.put(PrivateLessonsController());
-                  }
-                  final plCtrl = Get.find<PrivateLessonsController>();
-                  plCtrl.resetBookingFlow();
-                  // Pre-select this instructor and skip straight to step 1 (Date & Time)
-                  plCtrl.selectedInstructor.value = instructor;
-                  plCtrl.bookingStep.value = 1;
-                  Get.toNamed(AppRoutes.bookLesson);
+                  // Navigate to private lessons (instructor list)
+                  Get.toNamed(AppRoutes.privateLessons);
                 },
                 icon: const Icon(Icons.calendar_month_outlined, size: 18),
                 label: const Text('Book a Private Lesson'),

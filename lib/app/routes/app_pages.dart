@@ -34,6 +34,7 @@ import 'package:catalyst/modules/private_lessons/views/private_lessons_view.dart
 import 'package:catalyst/modules/profile/bindings/profile_binding.dart';
 import 'package:catalyst/modules/profile/views/profile_view.dart';
 import 'package:catalyst/modules/profile/views/settings_view.dart';
+import 'package:catalyst/modules/student_progress/bindings/student_progress_binding.dart';
 import 'package:catalyst/modules/student_progress/views/student_progress_view.dart';
 import 'package:catalyst/modules/competitions/views/competitions_view.dart';
 import 'package:catalyst/modules/documents/views/documents_view.dart';
@@ -169,6 +170,7 @@ class AppPages {
     GetPage(
       name: AppRoutes.studentProgress,
       page: () => const StudentProgressView(),
+      binding: StudentProgressBinding(),
     ),
     GetPage(
       name: AppRoutes.competitions,

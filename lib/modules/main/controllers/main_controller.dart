@@ -137,31 +137,6 @@ class ScheduleController extends GetxController {
   }
 }
 
-class BookingsController extends GetxController {
-  final allBookings = MockData.bookings.obs;
-  final selectedFilter = 'All'.obs;
-  final filters = ['All', 'Upcoming', 'Private Lesson', 'Class'].obs;
-
-  List<BookingModel> get filteredBookings {
-    switch (selectedFilter.value) {
-      case 'Upcoming':
-        return allBookings
-            .where((b) => b.status == 'Upcoming' || b.status == 'Confirmed')
-            .toList();
-      case 'Private Lesson':
-        return allBookings.where((b) => b.type == 'Private Lesson').toList();
-      case 'Class':
-        return allBookings.where((b) => b.type == 'Class').toList();
-      default:
-        return allBookings;
-    }
-  }
-
-  void selectFilter(String filter) => selectedFilter.value = filter;
-  BookingModel? selectedBooking;
-  void selectBooking(BookingModel booking) => selectedBooking = booking;
-}
-
 class MoreController extends GetxController {
   final userName = ''.obs;
   final userEmail = ''.obs;

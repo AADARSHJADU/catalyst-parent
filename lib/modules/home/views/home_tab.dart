@@ -142,8 +142,6 @@ class HomeTab extends GetView<HomeController> {
                         padding: EdgeInsets.only(bottom: 12),
                         child: AppCard(
                           onTap: () {
-                            Get.find<BookingsController>()
-                                .selectBooking(booking);
                             Get.toNamed(AppRoutes.bookingDetail);
                           },
                           child: Row(

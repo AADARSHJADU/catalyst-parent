@@ -390,17 +390,34 @@ class _TransactionCard extends GetView<PaymentsController> {
           const SizedBox(height: 10),
           Row(
             children: [
-              _infoChip(Icons.category_outlined, txn.category),
-              if (txn.date.isNotEmpty)
-                _infoChip(Icons.calendar_today_outlined, txn.date),
-              if (txn.time.isNotEmpty)
-                _infoChip(Icons.access_time_outlined, txn.time),
-              const Spacer(),
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _infoChip(Icons.category_outlined, txn.category),
+
+                      if (txn.date.isNotEmpty)
+                        _infoChip(Icons.calendar_today_outlined, txn.date),
+
+                      if (txn.time.isNotEmpty)
+                        _infoChip(Icons.access_time_outlined, txn.time),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 8),
+
               GestureDetector(
                 onTap: () => controller.viewReceipt(txn),
-                child: const Text('View Receipt',
-                    style: TextStyle(
-                        color: AppColors.primary, fontSize: 11)),
+                child: Text(
+                  'View Receipt',
+                  style: TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 11,
+                  ),
+                ),
               ),
             ],
           ),
@@ -417,7 +434,8 @@ class _TransactionCard extends GetView<PaymentsController> {
         children: [
           Icon(icon, size: 11, color: AppColors.textMuted),
           const SizedBox(width: 3),
-          Text(text,
+          Text(
+              text,
               style: const TextStyle(
                   color: AppColors.textSecondary, fontSize: 10)),
         ],

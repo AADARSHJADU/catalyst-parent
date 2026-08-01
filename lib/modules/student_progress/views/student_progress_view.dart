@@ -1,110 +1,13 @@
 import 'package:catalyst/core/constants/app_colors.dart';
 import 'package:catalyst/core/widgets/app_card.dart';
+import 'package:catalyst/data/models/student_evaluation_model.dart';
+import 'package:catalyst/data/models/student_feedback_model.dart';
+import 'package:catalyst/modules/student_progress/controllers/student_progress_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-// ── Local data models ──────────────────────────────────────────────────────────
-class _Skill {
-  const _Skill(this.name, this.percent, this.color);
-  final String name;
-  final double percent;
-  final Color color;
-}
-
-class _Feedback {
-  const _Feedback(
-      {required this.instructor,
-      required this.date,
-      required this.rating,
-      required this.text});
-  final String instructor;
-  final String date;
-  final int rating;
-  final String text;
-}
-
-class _Goal {
-  const _Goal(
-      {required this.title,
-      required this.dueDate,
-      required this.progress,
-      required this.color});
-  final String title;
-  final String dueDate;
-  final double progress;
-  final Color color;
-}
-
-class _ReportPoint {
-  const _ReportPoint(this.label, this.value);
-  final String label;
-  final double value; // 0–1
-}
-
-// ── Mock data ──────────────────────────────────────────────────────────────────
-const _skills = [
-  _Skill('Technique', 0.90, Color(0xFF9C27B0)),
-  _Skill('Performance', 0.80, Color(0xFF9C27B0)),
-  _Skill('Musicality', 0.85, Color(0xFF9C27B0)),
-  _Skill('Flexibility', 0.75, Color(0xFF9C27B0)),
-];
-
-const _feedbacks = [
-  _Feedback(
-    instructor: 'Ava Rodriguez',
-    date: 'May 23, 2025',
-    rating: 5,
-    text:
-        'Sarah shows great improvement in technique and musicality. Keep working on expression and stage presence. Proud of your progress!',
-  ),
-  _Feedback(
-    instructor: 'Hannah Blake',
-    date: 'May 15, 2025',
-    rating: 4,
-    text:
-        'Great effort this week! Turns are coming along well. Focus on clean arm positions during combinations.',
-  ),
-  _Feedback(
-    instructor: 'Liam Carter',
-    date: 'May 8, 2025',
-    rating: 5,
-    text:
-        'Excellent energy and stage presence during the jazz session. Keep building on that confidence!',
-  ),
-];
-
-const _goals = [
-  _Goal(
-    title: 'Improve Turns',
-    dueDate: 'Due: Jun 30, 2025',
-    progress: 0.75,
-    color: Color(0xFF2196F3),
-  ),
-  _Goal(
-    title: 'Increase Flexibility',
-    dueDate: 'Due: Jul 15, 2025',
-    progress: 0.60,
-    color: Color(0xFF2196F3),
-  ),
-  _Goal(
-    title: 'Perfect Performance',
-    dueDate: 'Due: Jun 10, 2025',
-    progress: 0.90,
-    color: Color(0xFF2196F3),
-  ),
-];
-
-const _reportPoints = [
-  _ReportPoint('Dec 2024', 0.50),
-  _ReportPoint('Jan 2025', 0.60),
-  _ReportPoint('Feb 2025', 0.68),
-  _ReportPoint('Mar 2025', 0.75),
-  _ReportPoint('Apr 2025', 0.82),
-  _ReportPoint('May 2025', 0.87),
-];
-
 // ── View ───────────────────────────────────────────────────────────────────────
-class StudentProgressView extends StatelessWidget {
+class StudentProgressView extends GetView<StudentProgressController> {
   const StudentProgressView({super.key});
 
   @override
@@ -119,199 +22,473 @@ class StudentProgressView extends StatelessWidget {
         ),
         title: const Text('Student Progress'),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-        children: [
-          // ── Page header ────────────────────────────────────────────
-          const SizedBox(height: 4),
-          Text('Student Progress',
-              style: Theme.of(context).textTheme.displayMedium),
-          const SizedBox(height: 4),
-          Text('Track your skills, feedback, goals, and achievements.',
-              style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: 20),
+      body: Obx(() {
+        if (controller.isLoading.value) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (controller.errorMessage.value.isNotEmpty &&
+            controller.students.isEmpty) {
+          return _ErrorState(
+            message: controller.errorMessage.value,
+            onRetry: controller.refreshData,
+          );
+        }
+        return RefreshIndicator(
+          onRefresh: controller.refreshData,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+            children: [
+              const SizedBox(height: 4),
+              // ── Student selector ──────────────────────────────────
+              if (controller.students.length > 1) ...[
+                _StudentDropdown(),
+                const SizedBox(height: 16),
+              ],
+              // ── Page header ────────────────────────────────────────
+              Text('Student Progress',
+                  style: Theme.of(context).textTheme.displayMedium),
+              const SizedBox(height: 4),
+              Text(
+                'Track skills, feedback, and attendance.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 20),
 
-          // ── Top row: Skill + Feedback + Goals ──────────────────────
-          // On narrow screens → stack vertically; wide → row
-          LayoutBuilder(builder: (context, constraints) {
-            final isWide = constraints.maxWidth > 600;
-            if (isWide) {
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: _SkillAssessmentsCard()),
-                  const SizedBox(width: 12),
-                  Expanded(child: _InstructorFeedbackCard()),
-                  const SizedBox(width: 12),
-                  Expanded(child: _GoalsTrackingCard()),
-                ],
-              );
-            }
-            return Column(children: [
-              _SkillAssessmentsCard(),
-              const SizedBox(height: 12),
-              _InstructorFeedbackCard(),
-              const SizedBox(height: 12),
-              _GoalsTrackingCard(),
-            ]);
-          }),
-          const SizedBox(height: 12),
+              // ── Loading overlay for data ──────────────────────────
+              if (controller.isDataLoading.value)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else ...[
+                // ── Attendance summary ────────────────────────────────
+                _AttendanceSummaryCard(),
+                const SizedBox(height: 12),
 
-          // ── Performance Reports ────────────────────────────────────
-          _PerformanceReportsCard(),
-          const SizedBox(height: 12),
+                // ── Skill Assessments ─────────────────────────────────
+                _SkillAssessmentsCard(),
+                const SizedBox(height: 12),
 
-          // ── Motivational banner ────────────────────────────────────
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.25)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.info_outline,
-                    size: 16, color: AppColors.primary),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Keep up the great work! Consistent practice leads to excellence.',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: AppColors.textSecondary),
+                // ── Instructor Feedback ───────────────────────────────
+                _InstructorFeedbackCard(),
+                const SizedBox(height: 12),
+
+                // ── Performance Reports ───────────────────────────────
+                _PerformanceReportsCard(),
+                const SizedBox(height: 12),
+
+                // ── Motivational banner ───────────────────────────────
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.25)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline,
+                          size: 16, color: AppColors.primary),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Keep up the great work! Consistent practice leads to excellence.',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: AppColors.textSecondary),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
-            ),
+            ],
           ),
-        ],
+        );
+      }),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Error state
+// ═══════════════════════════════════════════════════════════════════════════════
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.message, required this.onRetry});
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: AppColors.error),
+            const SizedBox(height: 16),
+            Text(message,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium),
+            const SizedBox(height: 16),
+            ElevatedButton(onPressed: onRetry, child: const Text('Retry')),
+          ],
+        ),
       ),
     );
   }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Skill Assessments card
+// Student Dropdown Selector
 // ═══════════════════════════════════════════════════════════════════════════════
-class _SkillAssessmentsCard extends StatelessWidget {
+class _StudentDropdown extends GetView<StudentProgressController> {
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.assignment_outlined,
-                    size: 18, color: AppColors.primary),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Skill Assessments',
-                        style: Theme.of(context).textTheme.titleMedium),
-                    Text('View detailed skill evaluations',
-                        style: Theme.of(context).textTheme.bodySmall),
-                  ],
-                ),
-              ),
-            ],
+    return Obx(() {
+      final selected = controller.selectedStudent.value;
+      return AppCard(
+        child: DropdownButtonFormField<int>(
+          value: selected?.id,
+          decoration: const InputDecoration(
+            labelText: 'Select Student',
+            border: OutlineInputBorder(),
+            contentPadding:
+                EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           ),
-          const SizedBox(height: 16),
-          const Divider(height: 1, color: AppColors.border),
-          const SizedBox(height: 16),
+          items: controller.students
+              .map((s) => DropdownMenuItem<int>(
+                    value: s.id,
+                    child: Text(s.fullName),
+                  ))
+              .toList(),
+          onChanged: (id) {
+            if (id == null) return;
+            final student =
+                controller.students.firstWhere((s) => s.id == id);
+            controller.selectStudent(student);
+          },
+        ),
+      );
+    });
+  }
+}
 
-          // Overall score ring + skill bars
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Circular progress
-              SizedBox(
-                width: 90,
-                height: 90,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    SizedBox(
-                      width: 90,
-                      height: 90,
-                      child: CircularProgressIndicator(
-                        value: 0.85,
-                        strokeWidth: 8,
-                        backgroundColor:
-                            AppColors.border,
-                        valueColor: const AlwaysStoppedAnimation(
-                            Color(0xFF9C27B0)),
+// ═══════════════════════════════════════════════════════════════════════════════
+// Attendance Summary Card
+// ═══════════════════════════════════════════════════════════════════════════════
+class _AttendanceSummaryCard extends GetView<StudentProgressController> {
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final total = controller.totalClasses;
+      final rate = controller.attendanceRate;
+      return AppCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.calendar_today_outlined,
+                      size: 18, color: AppColors.primary),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Attendance',
+                          style: Theme.of(context).textTheme.titleMedium),
+                      Text('$total total classes',
+                          style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: rate >= 80
+                        ? AppColors.success.withValues(alpha: 0.15)
+                        : AppColors.warning.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${rate.toStringAsFixed(0)}%',
+                    style: TextStyle(
+                      color: rate >= 80
+                          ? AppColors.success
+                          : AppColors.warning,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            const Divider(height: 1, color: AppColors.border),
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _StatChip(
+                    label: 'Present',
+                    count: controller.presentCount,
+                    color: AppColors.success),
+                _StatChip(
+                    label: 'Late',
+                    count: controller.lateCount,
+                    color: AppColors.warning),
+                _StatChip(
+                    label: 'Absent',
+                    count: controller.absentCount,
+                    color: AppColors.error),
+                _StatChip(
+                    label: 'Excused',
+                    count: controller.excusedCount,
+                    color: AppColors.textSecondary),
+              ],
+            ),
+          ],
+        ),
+      );
+    });
+  }
+}
+
+class _StatChip extends StatelessWidget {
+  const _StatChip({
+    required this.label,
+    required this.count,
+    required this.color,
+  });
+  final String label;
+  final int count;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text('$count',
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(color: color)),
+        const SizedBox(height: 2),
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
+      ],
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Skill Assessments Card
+// ═══════════════════════════════════════════════════════════════════════════════
+class _SkillAssessmentsCard extends GetView<StudentProgressController> {
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final skills = controller.skillBreakdown;
+      final overall = controller.overallScore;
+
+      if (controller.evaluations.isEmpty) {
+        return AppCard(
+          child: _EmptySection(
+            icon: Icons.assignment_outlined,
+            title: 'Skill Assessments',
+            message: 'No evaluations recorded yet.',
+          ),
+        );
+      }
+
+      return AppCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.assignment_outlined,
+                      size: 18, color: AppColors.primary),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Skill Assessments',
+                          style: Theme.of(context).textTheme.titleMedium),
+                      Text('Latest evaluation breakdown',
+                          style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1, color: AppColors.border),
+            const SizedBox(height: 16),
+            // Overall score ring + skill bars
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 90,
+                  height: 90,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      SizedBox(
+                        width: 90,
+                        height: 90,
+                        child: CircularProgressIndicator(
+                          value: overall / 100.0,
+                          strokeWidth: 8,
+                          backgroundColor: AppColors.border,
+                          valueColor: const AlwaysStoppedAnimation(
+                              Color(0xFF9C27B0)),
+                        ),
                       ),
-                    ),
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('85%',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 20)),
-                        Text('Overall',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall),
-                        Text('Score',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall),
-                      ],
-                    ),
-                  ],
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('${overall.toInt()}%',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(
+                                      color: AppColors.textPrimary,
+                                      fontSize: 20)),
+                          Text('Overall',
+                              style:
+                                  Theme.of(context).textTheme.bodySmall),
+                          Text('Score',
+                              style:
+                                  Theme.of(context).textTheme.bodySmall),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              // Skill bars
-              Expanded(
-                child: Column(
-                  children: _skills
-                      .map((s) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: _SkillBar(skill: s),
-                          ))
-                      .toList(),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    children: skills.entries
+                        .map((e) => Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: _SkillBar(
+                                  name: e.key, percent: e.value),
+                            ))
+                        .toList(),
+                  ),
                 ),
+              ],
+            ),
+            // ── Evaluation details ──────────────────────────────
+            if (controller.evaluations.first.comments != null) ...[
+              const SizedBox(height: 14),
+              const Divider(height: 1, color: AppColors.border),
+              const SizedBox(height: 12),
+              Text(
+                controller.evaluations.first.comments!,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                      height: 1.5,
+                    ),
               ),
             ],
-          ),
-          const SizedBox(height: 14),
-          const Divider(height: 1, color: AppColors.border),
-          _ViewAllRow(
-            label: 'View All Assessments',
-            onTap: () => Get.snackbar(
-                'Assessments', 'Full assessments coming soon',
-                snackPosition: SnackPosition.BOTTOM),
-          ),
-        ],
+            if (controller.evaluations.first.goals != null) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const Icon(Icons.flag_outlined,
+                      size: 14, color: AppColors.primary),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Goal: ${controller.evaluations.first.goals}',
+                      style:
+                          Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 14),
+            const Divider(height: 1, color: AppColors.border),
+            _ViewAllRow(
+              label: 'View All Evaluations (${controller.evaluations.length})',
+              onTap: () => _showAllEvaluations(context),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  void _showAllEvaluations(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.card,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (_) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.7,
+        maxChildSize: 0.92,
+        builder: (_, scroll) => ListView(
+          controller: scroll,
+          padding: const EdgeInsets.all(20),
+          children: [
+            Center(
+              child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(2))),
+            ),
+            Text('All Evaluations',
+                style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 16),
+            ...controller.evaluations
+                .map((e) => _EvaluationTile(evaluation: e)),
+          ],
+        ),
       ),
     );
   }
 }
 
 class _SkillBar extends StatelessWidget {
-  const _SkillBar({required this.skill});
-  final _Skill skill;
+  const _SkillBar({required this.name, required this.percent});
+  final String name;
+  final double percent;
 
   @override
   Widget build(BuildContext context) {
@@ -319,16 +496,17 @@ class _SkillBar extends StatelessWidget {
       children: [
         SizedBox(
           width: 76,
-          child: Text(skill.name,
-              style: Theme.of(context).textTheme.bodySmall),
+          child:
+              Text(name, style: Theme.of(context).textTheme.bodySmall),
         ),
         Expanded(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
-              value: skill.percent,
+              value: percent,
               backgroundColor: AppColors.border,
-              valueColor: AlwaysStoppedAnimation(skill.color),
+              valueColor:
+                  const AlwaysStoppedAnimation(Color(0xFF9C27B0)),
               minHeight: 6,
             ),
           ),
@@ -337,7 +515,7 @@ class _SkillBar extends StatelessWidget {
         SizedBox(
           width: 34,
           child: Text(
-            '${(skill.percent * 100).toInt()}%',
+            '${(percent * 100).toInt()}%',
             textAlign: TextAlign.right,
             style: Theme.of(context)
                 .textTheme
@@ -350,102 +528,161 @@ class _SkillBar extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Instructor Feedback card
-// ═══════════════════════════════════════════════════════════════════════════════
-class _InstructorFeedbackCard extends StatelessWidget {
+class _EvaluationTile extends StatelessWidget {
+  const _EvaluationTile({required this.evaluation});
+  final StudentEvaluationModel evaluation;
+
   @override
   Widget build(BuildContext context) {
-    final latest = _feedbacks.first;
-    return AppCard(
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border, width: 0.5),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Row(
             children: [
+              Expanded(
+                child: Text(
+                  evaluation.term ?? evaluation.date,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleSmall
+                      ?.copyWith(color: AppColors.textPrimary),
+                ),
+              ),
               Container(
-                width: 36,
-                height: 36,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.chat_bubble_outline,
-                    size: 18, color: AppColors.primary),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Instructor Feedback',
-                        style: Theme.of(context).textTheme.titleMedium),
-                    Text("See what your instructors are saying",
-                        style: Theme.of(context).textTheme.bodySmall),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          const Divider(height: 1, color: AppColors.border),
-          const SizedBox(height: 14),
-
-          // Latest feedback
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: AppColors.primary.withValues(alpha: 0.2),
                 child: Text(
-                  latest.instructor.split(' ').map((p) => p[0]).join(),
+                  '${evaluation.overallScore.toInt()}%',
                   style: const TextStyle(
-                      color: AppColors.primary, fontSize: 13),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(latest.instructor,
-                        style: Theme.of(context).textTheme.titleMedium),
-                    Text(latest.date,
-                        style: Theme.of(context).textTheme.bodySmall),
-                  ],
+                      color: AppColors.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          // Stars
-          Row(
-            children: List.generate(
-                5,
-                (i) => Icon(
-                      i < latest.rating ? Icons.star : Icons.star_border,
-                      size: 18,
-                      color: AppColors.warning,
-                    )),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            latest.text,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSecondary,
-                  height: 1.55,
+          if (evaluation.instructor != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              'By ${evaluation.instructor!.fullName}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+          if (evaluation.comments != null &&
+              evaluation.comments!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              evaluation.comments!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                    height: 1.5,
+                  ),
+            ),
+          ],
+          if (evaluation.goals != null &&
+              evaluation.goals!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.flag_outlined,
+                    size: 13, color: AppColors.primary),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    evaluation.goals!,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: AppColors.primary),
+                  ),
                 ),
-          ),
-          const SizedBox(height: 14),
-          const Divider(height: 1, color: AppColors.border),
-          _ViewAllRow(
-            label: 'View All Feedback',
-            onTap: () => _showAllFeedback(context),
-          ),
+              ],
+            ),
+          ],
         ],
       ),
     );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Instructor Feedback Card
+// ═══════════════════════════════════════════════════════════════════════════════
+class _InstructorFeedbackCard extends GetView<StudentProgressController> {
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      if (controller.feedbackList.isEmpty) {
+        return AppCard(
+          child: _EmptySection(
+            icon: Icons.chat_bubble_outline,
+            title: 'Instructor Feedback',
+            message: 'No feedback available yet.',
+          ),
+        );
+      }
+
+      final latest = controller.feedbackList.first;
+      return AppCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.chat_bubble_outline,
+                      size: 18, color: AppColors.primary),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Instructor Feedback',
+                          style:
+                              Theme.of(context).textTheme.titleMedium),
+                      Text("What your instructors are saying",
+                          style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1, color: AppColors.border),
+            const SizedBox(height: 14),
+            // Latest feedback
+            _FeedbackItem(feedback: latest),
+            const SizedBox(height: 14),
+            const Divider(height: 1, color: AppColors.border),
+            _ViewAllRow(
+              label:
+                  'View All Feedback (${controller.feedbackList.length})',
+              onTap: () => _showAllFeedback(context),
+            ),
+          ],
+        ),
+      );
+    });
   }
 
   void _showAllFeedback(BuildContext context) {
@@ -454,8 +691,7 @@ class _InstructorFeedbackCard extends StatelessWidget {
       backgroundColor: AppColors.card,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-          borderRadius:
-              BorderRadius.vertical(top: Radius.circular(16))),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (_) => DraggableScrollableSheet(
         expand: false,
         initialChildSize: 0.7,
@@ -476,7 +712,11 @@ class _InstructorFeedbackCard extends StatelessWidget {
             Text('All Feedback',
                 style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
-            ..._feedbacks.map((f) => _FeedbackTile(feedback: f)),
+            ...controller.feedbackList
+                .map((f) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _FeedbackItem(feedback: f),
+                    )),
           ],
         ),
       ),
@@ -484,14 +724,22 @@ class _InstructorFeedbackCard extends StatelessWidget {
   }
 }
 
-class _FeedbackTile extends StatelessWidget {
-  const _FeedbackTile({required this.feedback});
-  final _Feedback feedback;
+class _FeedbackItem extends StatelessWidget {
+  const _FeedbackItem({required this.feedback});
+  final StudentFeedbackModel feedback;
 
   @override
   Widget build(BuildContext context) {
+    final instructorName =
+        feedback.instructor?.fullName ?? 'Instructor';
+    final initials = instructorName
+        .split(' ')
+        .where((p) => p.isNotEmpty)
+        .map((p) => p[0])
+        .take(2)
+        .join();
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -504,48 +752,62 @@ class _FeedbackTile extends StatelessWidget {
           Row(
             children: [
               CircleAvatar(
-                radius: 18,
+                radius: 20,
                 backgroundColor:
                     AppColors.primary.withValues(alpha: 0.2),
-                child: Text(
-                  feedback.instructor.split(' ').map((p) => p[0]).join(),
-                  style: const TextStyle(
-                      color: AppColors.primary, fontSize: 11),
-                ),
+                child: Text(initials,
+                    style: const TextStyle(
+                        color: AppColors.primary, fontSize: 12)),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(feedback.instructor,
-                        style: Theme.of(context).textTheme.bodyMedium
-                            ?.copyWith(color: AppColors.textPrimary)),
+                    Text(instructorName,
+                        style:
+                            Theme.of(context).textTheme.titleSmall),
                     Text(feedback.date,
                         style: Theme.of(context).textTheme.bodySmall),
                   ],
                 ),
               ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: List.generate(
-                    5,
-                    (i) => Icon(
-                          i < feedback.rating
-                              ? Icons.star
-                              : Icons.star_border,
-                          size: 14,
-                          color: AppColors.warning,
-                        )),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  feedback.type,
+                  style: const TextStyle(
+                      color: AppColors.primary, fontSize: 11),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          Text(feedback.text,
+          if (feedback.notesToParent != null &&
+              feedback.notesToParent!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              feedback.notesToParent!,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: AppColors.textSecondary,
                     height: 1.55,
-                  )),
+                  ),
+            ),
+          ] else if (feedback.summary != null &&
+              feedback.summary!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              feedback.summary!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                    height: 1.55,
+                  ),
+            ),
+          ],
         ],
       ),
     );
@@ -553,244 +815,159 @@ class _FeedbackTile extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Goals Tracking card
+// Performance Reports Card (line chart from evaluations over time)
 // ═══════════════════════════════════════════════════════════════════════════════
-class _GoalsTrackingCard extends StatelessWidget {
+class _PerformanceReportsCard extends GetView<StudentProgressController> {
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.track_changes_outlined,
-                    size: 18, color: AppColors.primary),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Goals Tracking',
-                        style: Theme.of(context).textTheme.titleMedium),
-                    Text('Monitor your progress toward goals',
-                        style: Theme.of(context).textTheme.bodySmall),
-                  ],
-                ),
-              ),
-            ],
+    return Obx(() {
+      final trend = controller.progressTrend;
+      if (trend.isEmpty) {
+        return AppCard(
+          child: _EmptySection(
+            icon: Icons.bar_chart_outlined,
+            title: 'Performance Reports',
+            message: 'Not enough data for performance trends.',
           ),
-          const SizedBox(height: 16),
-          const Divider(height: 1, color: AppColors.border),
-          const SizedBox(height: 14),
+        );
+      }
 
-          // Goals list
-          ..._goals.map((g) => Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: _GoalItem(goal: g),
-              )),
+      final latestScore = controller.overallScore;
+      // Calculate improvement vs previous if available
+      String? improvement;
+      if (controller.evaluations.length >= 2) {
+        final sorted = [...controller.evaluations]
+          ..sort((a, b) => a.date.compareTo(b.date));
+        final prev = sorted[sorted.length - 2].overallScore;
+        final curr = sorted.last.overallScore;
+        final diff = curr - prev;
+        if (diff > 0) {
+          improvement = '+${diff.toStringAsFixed(0)}% from last report';
+        } else if (diff < 0) {
+          improvement = '${diff.toStringAsFixed(0)}% from last report';
+        }
+      }
 
-          const Divider(height: 1, color: AppColors.border),
-          _ViewAllRow(
-            label: 'View All Goals',
-            onTap: () => Get.snackbar('Goals', 'All goals coming soon',
-                snackPosition: SnackPosition.BOTTOM),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _GoalItem extends StatelessWidget {
-  const _GoalItem({required this.goal});
-  final _Goal goal;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+      return AppCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Text(goal.title,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: AppColors.textPrimary)),
-            ),
-            Text(goal.dueDate,
-                style: Theme.of(context).textTheme.bodySmall),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: goal.progress,
-                  backgroundColor: AppColors.border,
-                  valueColor: AlwaysStoppedAnimation(goal.color),
-                  minHeight: 6,
+            // Header
+            Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.bar_chart_outlined,
+                      size: 18, color: AppColors.primary),
                 ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Text('${(goal.progress * 100).toInt()}%',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: AppColors.textPrimary)),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Performance Reports card
-// ═══════════════════════════════════════════════════════════════════════════════
-class _PerformanceReportsCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.bar_chart_outlined,
-                    size: 18, color: AppColors.primary),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Performance Reports',
-                        style: Theme.of(context).textTheme.titleMedium),
-                    Text('Detailed insights into performance',
-                        style: Theme.of(context).textTheme.bodySmall),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          const Divider(height: 1, color: AppColors.border),
-          const SizedBox(height: 16),
-
-          // Stats row
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Average Score',
-                      style: Theme.of(context).textTheme.bodySmall),
-                  const SizedBox(height: 4),
-                  Text('87%',
-                      style: Theme.of(context)
-                          .textTheme
-                          .displayMedium
-                          ?.copyWith(color: AppColors.primary)),
-                  const SizedBox(height: 4),
-                  Row(
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.trending_up,
-                          size: 14, color: AppColors.success),
-                      const SizedBox(width: 4),
-                      Text('5% from last report',
+                      Text('Performance Reports',
+                          style:
+                              Theme.of(context).textTheme.titleMedium),
+                      Text('Progress over time',
+                          style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1, color: AppColors.border),
+            const SizedBox(height: 16),
+
+            // Stats row
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Average Score',
+                        style: Theme.of(context).textTheme.bodySmall),
+                    const SizedBox(height: 4),
+                    Text('${latestScore.toInt()}%',
+                        style: Theme.of(context)
+                            .textTheme
+                            .displayMedium
+                            ?.copyWith(color: AppColors.primary)),
+                    if (improvement != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            improvement.startsWith('+')
+                                ? Icons.trending_up
+                                : Icons.trending_down,
+                            size: 14,
+                            color: improvement.startsWith('+')
+                                ? AppColors.success
+                                : AppColors.error,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(improvement,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: improvement.startsWith('+')
+                                        ? AppColors.success
+                                        : AppColors.error,
+                                  )),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(width: 20),
+                Expanded(child: _LineChart(data: trend)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Month labels
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: trend
+                  .map((p) => Flexible(
+                        child: Text(
+                          (p['label'] as String).length > 8
+                              ? (p['label'] as String).substring(0, 8)
+                              : p['label'] as String,
                           style: Theme.of(context)
                               .textTheme
                               .bodySmall
-                              ?.copyWith(color: AppColors.success)),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: _LineChart(),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Month labels
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: _reportPoints
-                .map((p) => Text(p.label,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(fontSize: 9)))
-                .toList(),
-          ),
-          const SizedBox(height: 14),
-          const Divider(height: 1, color: AppColors.border),
-
-          // Footer row
-          Row(
-            children: [
-              TextButton(
-                onPressed: () => Get.snackbar(
-                    'Report', 'Full report coming soon',
-                    snackPosition: SnackPosition.BOTTOM),
-                child: const Text('View Full Report',
-                    style: TextStyle(
-                        color: AppColors.textPrimary, fontSize: 13)),
-              ),
-              const Spacer(),
-              TextButton.icon(
-                onPressed: () => Get.snackbar(
-                    'Download', 'Report downloaded',
-                    snackPosition: SnackPosition.BOTTOM),
-                icon: const Icon(Icons.download_outlined,
-                    size: 16, color: AppColors.primary),
-                label: const Text('Download Report',
-                    style: TextStyle(
-                        color: AppColors.primary, fontSize: 13)),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+                              ?.copyWith(fontSize: 9),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ))
+                  .toList(),
+            ),
+          ],
+        ),
+      );
+    });
   }
 }
 
-// ── Custom line chart (no package needed) ─────────────────────────────────────
+// ── Custom line chart ─────────────────────────────────────────────────────────
 class _LineChart extends StatelessWidget {
+  const _LineChart({required this.data});
+  final List<Map<String, dynamic>> data;
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: 100,
       child: CustomPaint(
-        painter: _ChartPainter(),
+        painter: _ChartPainter(data),
         size: const Size(double.infinity, 100),
       ),
     );
@@ -798,10 +975,12 @@ class _LineChart extends StatelessWidget {
 }
 
 class _ChartPainter extends CustomPainter {
+  _ChartPainter(this.data);
+  final List<Map<String, dynamic>> data;
+
   @override
   void paint(Canvas canvas, Size size) {
-    final points = _reportPoints;
-    if (points.length < 2) return;
+    if (data.length < 2) return;
 
     final w = size.width;
     final h = size.height;
@@ -817,9 +996,10 @@ class _ChartPainter extends CustomPainter {
 
     // Build point positions
     final coords = <Offset>[];
-    for (int i = 0; i < points.length; i++) {
-      final x = (i / (points.length - 1)) * w;
-      final y = h - (points[i].value * h * 0.8) - h * 0.1;
+    for (int i = 0; i < data.length; i++) {
+      final x = (i / (data.length - 1)) * w;
+      final value = (data[i]['value'] as double).clamp(0.0, 1.0);
+      final y = h - (value * h * 0.8) - h * 0.1;
       coords.add(Offset(x, y));
     }
 
@@ -871,7 +1051,8 @@ class _ChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _ChartPainter oldDelegate) =>
+      oldDelegate.data != data;
 }
 
 // ── Shared helpers ─────────────────────────────────────────────────────────────
@@ -899,6 +1080,50 @@ class _ViewAllRow extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _EmptySection extends StatelessWidget {
+  const _EmptySection({
+    required this.icon,
+    required this.title,
+    required this.message,
+  });
+  final IconData icon;
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, size: 18, color: AppColors.primary),
+            ),
+            const SizedBox(width: 10),
+            Text(title,
+                style: Theme.of(context).textTheme.titleMedium),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Center(
+          child: Text(message,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: AppColors.textSecondary)),
+        ),
+      ],
     );
   }
 }
