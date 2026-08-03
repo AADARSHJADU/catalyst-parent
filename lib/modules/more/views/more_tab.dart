@@ -20,6 +20,8 @@ class MoreTab extends GetView<MoreController> {
       _MenuItem(Icons.emoji_events_outlined, 'Competitions & Events', AppRoutes.competitions),
       _MenuItem(Icons.folder_outlined, 'Documents', AppRoutes.documents),
       _MenuItem(Icons.person_pin, 'Private Lessons', AppRoutes.privateLessons),
+      _MenuItem(Icons.school_outlined, 'Regular Classes', AppRoutes.regularClasses),
+      _MenuItem(Icons.theater_comedy_outlined, 'Choreography', AppRoutes.choreography),
       _MenuItem(Icons.payment, 'Payments & Billing', AppRoutes.payments),
       _MenuItem(Icons.notifications_outlined, 'Notifications', AppRoutes.notifications),
       _MenuItem(Icons.person_outline, 'Student Profile', AppRoutes.studentProfile),

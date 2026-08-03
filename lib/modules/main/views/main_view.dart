@@ -4,7 +4,7 @@ import 'package:catalyst/modules/home/views/home_tab.dart';
 import 'package:catalyst/modules/main/controllers/main_controller.dart';
 import 'package:catalyst/modules/messages/views/messages_view.dart';
 import 'package:catalyst/modules/more/views/more_tab.dart';
-import 'package:catalyst/modules/schedule/views/schedule_tab.dart';
+import 'package:catalyst/modules/schedule_parent/views/parent_schedule_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -15,7 +15,7 @@ class MainView extends GetView<MainController> {
   Widget build(BuildContext context) {
     final pages = [
       const HomeTab(),
-      const ScheduleTab(),
+      const ParentScheduleView(),
       const MessagesView(),
       const BookingsTab(),
       const MoreTab(),

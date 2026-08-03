@@ -18,6 +18,10 @@ import 'package:catalyst/modules/student_profile/views/student_profile_view.dart
 import 'package:catalyst/modules/documents/bindings/documents_binding.dart';
 import 'package:catalyst/modules/announcements/bindings/announcements_binding.dart';
 import 'package:catalyst/modules/announcements/views/announcements_view.dart';
+import 'package:catalyst/modules/regular_classes/bindings/regular_classes_binding.dart';
+import 'package:catalyst/modules/regular_classes/views/regular_classes_view.dart';
+import 'package:catalyst/modules/choreography/bindings/choreography_binding.dart';
+import 'package:catalyst/modules/choreography/views/choreography_view.dart';
 import 'package:catalyst/modules/messages/bindings/messages_binding.dart';
 import 'package:catalyst/modules/messages/views/chat_view.dart';
 import 'package:catalyst/modules/messages/views/group_info_view.dart';
@@ -200,6 +204,16 @@ class AppPages {
       name: AppRoutes.announcements,
       page: () => const AnnouncementsView(),
       binding: AnnouncementsBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.regularClasses,
+      page: () => const RegularClassesView(),
+      binding: RegularClassesBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.choreography,
+      page: () => const ChoreographyView(),
+      binding: ChoreographyBinding(),
     ),
     GetPage(
       name: AppRoutes.chat,

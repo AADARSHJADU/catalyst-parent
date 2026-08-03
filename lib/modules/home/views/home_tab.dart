@@ -202,9 +202,9 @@ class _QuickActions extends StatelessWidget {
   Widget build(BuildContext context) {
     final actions = [
       _ActionItem(
-        icon: Icons.calendar_month,
-        label: 'Schedule',
-        route: AppRoutes.classSchedule,
+        icon: Icons.school_outlined,
+        label: 'Classes',
+        route: AppRoutes.regularClasses,
       ),
       _ActionItem(
         icon: Icons.person_pin,
@@ -212,14 +212,14 @@ class _QuickActions extends StatelessWidget {
         route: AppRoutes.privateLessons,
       ),
       _ActionItem(
+        icon: Icons.music_note,
+        label: 'Choreography',
+        route: AppRoutes.choreography,
+      ),
+      _ActionItem(
         icon: Icons.payment,
         label: 'Payments',
         route: AppRoutes.payments,
-      ),
-      _ActionItem(
-        icon: Icons.family_restroom,
-        label: 'Family',
-        route: AppRoutes.family,
       ),
     ];
 

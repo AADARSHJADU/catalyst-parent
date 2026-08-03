@@ -36,6 +36,8 @@ abstract class AppRoutes {
   static const wellnessBookingConfirmed = '/wellness-booking-confirmed';
   static const wellnessMyBookings = '/wellness-my-bookings';
   static const announcements = '/announcements';
+  static const regularClasses = '/regular-classes';
+  static const choreography = '/choreography';
   static const messages = '/messages';
   static const chat = '/chat';
   static const newChat = '/new-chat';

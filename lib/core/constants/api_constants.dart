@@ -110,6 +110,34 @@ abstract class ApiConstants {
   static String classBookingDetails(int classId) =>
       '/parent/class-booking/details/$classId';
 
+  // ── Regular Class Booking ─────────────────────────────────────────────────
+  static const String regularClasses = '/parent/class-booking/classes';
+  static const String regularClassCheckout = '/parent/class-booking/checkout';
+  static const String regularClassCapture = '/parent/class-booking/capture';
+  static const String regularClassPaypalCapture = '/parent/class-booking/paypal-capture';
+  static const String regularClassPayLater = '/parent/class-booking/pay-later';
+  static const String regularClassMyBookings = '/parent/class-booking/my-bookings';
+  static String regularClassDetail(int classId) => '/parent/class-booking/details/$classId';
+  static String dropEnrollment(int id) => '/parent/enrollment/regular/$id';
+
+  // ── Choreography Booking ──────────────────────────────────────────────────
+  static const String choreographyList = '/parent/choreography-booking';
+  static const String choreographyCheckout =
+      '/parent/choreography-booking/checkout';
+  static const String choreographyCapture =
+      '/parent/choreography-booking/capture';
+  static const String choreographyPaypalCapture =
+      '/parent/choreography-booking/paypal-capture';
+  static const String choreographyPayLater =
+      '/parent/choreography-booking/pay-later';
+  static const String choreographyHistory =
+      '/parent/choreography-booking/history';
+
+  // ── Schedule ──────────────────────────────────────────────────────────────
+  static const String myEnrollments = '/parent/enrollment/my-enrollments';
+  static const String wellnessSchedule = '/parent/schedule/wellness';
+  static const String studiosList = '/admin/studios';
+
   // ── Timeouts ──────────────────────────────────────────────────────────────
   static const int connectTimeoutMs = 15000;
   static const int receiveTimeoutMs = 15000;
