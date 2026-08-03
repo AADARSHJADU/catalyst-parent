@@ -3,8 +3,8 @@
 abstract class ApiConstants {
   ApiConstants._();
 
-  //static const String baseUrl = 'http://192.168.1.14:8080/api/v1';
-  static const String baseUrl = 'https://darksalmon-dragonfly-928313.hostingersite.com/api/v1';
+  static const String baseUrl = 'http://192.168.1.27:8080/api/v1';
+  //static const String baseUrl = 'https://darksalmon-dragonfly-928313.hostingersite.com/api/v1';
 
   // ── Auth ──────────────────────────────────────────────────────────────────
   static const String register = '/auth/register';
@@ -119,6 +119,7 @@ abstract class ApiConstants {
   static const String regularClassMyBookings = '/parent/class-booking/my-bookings';
   static String regularClassDetail(int classId) => '/parent/class-booking/details/$classId';
   static String dropEnrollment(int id) => '/parent/enrollment/regular/$id';
+  static String payClassInvoice(int id) => '/parent/payments/class/$id/pay';
 
   // ── Choreography Booking ──────────────────────────────────────────────────
   static const String choreographyList = '/parent/choreography-booking';
@@ -137,6 +138,41 @@ abstract class ApiConstants {
   static const String myEnrollments = '/parent/enrollment/my-enrollments';
   static const String wellnessSchedule = '/parent/schedule/wellness';
   static const String studiosList = '/admin/studios';
+
+  // ── Wellness ──────────────────────────────────────────────────────────────
+  static const String wellnessClasses = '/parent/wellness/classes';
+  static const String wellnessBookClass = '/parent/wellness/classes/book';
+  static const String wellnessDropinCheckout =
+      '/parent/wellness/classes/dropin-checkout';
+  static const String wellnessDropinConfirm =
+      '/parent/wellness/classes/dropin-confirm';
+  static const String wellnessCancelBooking =
+      '/parent/wellness/classes/cancel-booking';
+  static const String wellnessMyBookings =
+      '/parent/wellness/classes/my-bookings';
+  static const String wellnessProducts =
+      '/parent/wellness-membership/products';
+  static const String wellnessMembershipCheckout =
+      '/parent/wellness-membership/checkout';
+  static const String wellnessMembershipCapture =
+      '/parent/wellness-membership/capture';
+  static const String wellnessMyMemberships =
+      '/parent/wellness-membership/my-memberships';
+
+  // ── Routines ──────────────────────────────────────────────────────────────
+  static String routinePayment(int paymentId) =>
+      '/parent/payments/routine/$paymentId/pay';
+  static const String routineEnroll = '/parent/enrollment/routine';
+  static const String paymentsCapture = '/parent/payments/capture';
+
+  // ── Competitions & Events ─────────────────────────────────────────────────
+  static const String competitions = '/parent/events/competitions';
+  static const String myRegistrations = '/parent/events/my-registrations';
+  static String competitionSchedule(int id) =>
+      '/parent/events/competition/$id/schedule';
+  static const String pastResults = '/parent/events/past-results';
+  static String competitionPayment(int id) =>
+      '/parent/payments/competition/$id/pay';
 
   // ── Timeouts ──────────────────────────────────────────────────────────────
   static const int connectTimeoutMs = 15000;

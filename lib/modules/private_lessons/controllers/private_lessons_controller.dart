@@ -1,5 +1,6 @@
 import 'package:catalyst/core/constants/app_colors.dart';
 import 'package:catalyst/core/network/api_exception.dart';
+import 'package:catalyst/core/services/stripe_payment_service.dart';
 import 'package:catalyst/data/services/private_booking_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -237,26 +238,24 @@ class PrivateLessonsController extends GetxController {
       // Step 1: Checkout — get payment session
       final checkoutData = await _service.lessonCheckout(lessonId);
 
+      final clientSecret = checkoutData['clientSecret']?.toString() ?? '';
       final approvalUrl = checkoutData['approvalUrl']?.toString() ?? '';
       final gatewayOrderId = checkoutData['gatewayOrderId']?.toString() ?? '';
 
-      if (approvalUrl.isNotEmpty) {
-        // Open Stripe/PayPal hosted checkout page in browser
-        await _openPaymentUrl(approvalUrl);
+      if (clientSecret.isNotEmpty) {
+        // Use in-app Stripe Payment Sheet
+        final success = await StripePaymentService.instance
+            .presentPaymentSheet(clientSecret: clientSecret);
 
-        // After user returns from payment, refresh bookings
-        // (Status will be updated by backend webhook)
-        Future.delayed(const Duration(seconds: 3), () {
-          refreshBookings();
-        });
-      } else if (gatewayOrderId.isNotEmpty) {
-        // Try direct capture (for backends that support it)
-        try {
-          await _service.lessonCapture(
-            lessonId,
-            gatewayOrderId: gatewayOrderId,
-            paymentMethod: 'stripe',
-          );
+        if (success) {
+          // Capture on backend
+          try {
+            await _service.lessonCapture(
+              lessonId,
+              gatewayOrderId: gatewayOrderId,
+              paymentMethod: 'stripe',
+            );
+          } catch (_) {}
           await refreshBookings();
           Future.delayed(const Duration(milliseconds: 300), () {
             Get.snackbar('Payment Successful!',
@@ -265,14 +264,14 @@ class PrivateLessonsController extends GetxController {
                 backgroundColor: AppColors.success,
                 colorText: Colors.white);
           });
-        } catch (_) {
-          // Capture failed — backend may need webhook instead
-          Get.snackbar('Info',
-              'Payment session created. Please complete payment if redirected.',
-              snackPosition: SnackPosition.BOTTOM,
-              backgroundColor: AppColors.warning,
-              colorText: Colors.white);
         }
+        return;
+      }
+
+      // Fallback: open approvalUrl in browser
+      if (approvalUrl.isNotEmpty) {
+        await _openPaymentUrl(approvalUrl);
+        Future.delayed(const Duration(seconds: 3), () => refreshBookings());
       } else {
         Get.snackbar('Error', 'Failed to initiate payment session.',
             snackPosition: SnackPosition.BOTTOM,

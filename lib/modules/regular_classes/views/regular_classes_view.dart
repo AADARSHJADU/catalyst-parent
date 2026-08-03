@@ -385,15 +385,29 @@ class _EnrollmentCard extends GetView<RegularClassesController> {
             _row(Icons.attach_money, '\$${(cost as num).toStringAsFixed(2)}'),
           if (id != null && bookingType != 'waitlist') ...[
             const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
+            Row(children: [
+              if (!isPaid) ...[
+                Expanded(child: ElevatedButton(
+                  onPressed: () {
+                    final payId = booking['paymentId'] as int? ?? id;
+                    controller.payClassInvoice(payId);
+                  },
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                  child: const Text('Pay Now', style: TextStyle(fontSize: 12)),
+                )),
+                const SizedBox(width: 8),
+              ],
+              TextButton.icon(
                 onPressed: () => _confirmDrop(context, id),
-                icon: const Icon(Icons.cancel_outlined, size: 16, color: AppColors.error),
-                label: const Text('Drop Class',
-                    style: TextStyle(color: AppColors.error, fontSize: 12)),
+                icon: const Icon(Icons.cancel_outlined, size: 14, color: AppColors.error),
+                label: const Text('Drop',
+                    style: TextStyle(color: AppColors.error, fontSize: 11)),
               ),
-            ),
+            ]),
           ],
         ],
       ),
@@ -584,6 +598,25 @@ class _ClassDetailPage extends GetView<RegularClassesController> {
     );
   }
 
+  Widget _feeRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+          Text(value, style: const TextStyle(color: AppColors.textPrimary, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  String _safePrice(dynamic v) {
+    if (v == null) return '0.00';
+    if (v is num) return v.toStringAsFixed(2);
+    return double.tryParse(v.toString())?.toStringAsFixed(2) ?? v.toString();
+  }
+
   void _showBookingSheet(BuildContext context, int classId, String className) {
     controller.selectedClassId.value = classId;
     controller.joiningDate.value = null;
@@ -663,6 +696,49 @@ class _ClassDetailPage extends GetView<RegularClassesController> {
                 ),
               )),
               const SizedBox(height: 20),
+              // Payment Summary
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Builder(builder: (_) {
+                  final baseCost = double.tryParse(
+                          classData['cost']?.toString() ?? '0') ?? 0;
+                  final feeComponents = controller.feeComponentsMap;
+                  final grandTotal = controller.getGrandTotal(baseCost);
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Payment Summary',
+                          style: TextStyle(color: AppColors.textPrimary,
+                              fontSize: 13, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 8),
+                      _feeRow('Class Tuition (${classData['billingType'] ?? 'monthly'})',
+                          '\$${baseCost.toStringAsFixed(2)}'),
+                      ...feeComponents.entries.map((e) =>
+                          _feeRow(e.key, '\$${e.value.toStringAsFixed(2)}')),
+                      const Divider(color: AppColors.border, height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Grand Total',
+                              style: TextStyle(color: AppColors.textPrimary,
+                                  fontSize: 14, fontWeight: FontWeight.bold)),
+                          Text('\$${grandTotal.toStringAsFixed(2)}',
+                              style: const TextStyle(color: AppColors.success,
+                                  fontSize: 20, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ],
+                  );
+                }),
+              ),
+              const SizedBox(height: 16),
               // Buttons
               Obx(() => Column(
                 children: [

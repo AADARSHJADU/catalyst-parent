@@ -156,7 +156,7 @@ class PrivateBookingService {
     try {
       final response = await _dio.post(
         ApiConstants.privateBookingLessonCheckout(lessonId),
-        data: {'paymentMethod': paymentMethod},
+        data: {'paymentMethod': paymentMethod, 'platform': 'mobile'},
       );
       return response.data['data'] as Map<String, dynamic>? ?? {};
     } on DioException catch (e) {

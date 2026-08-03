@@ -87,6 +87,7 @@ class RegularClassService {
           'classId': classId,
           'paymentMethod': paymentMethod,
           'joiningDate': joiningDate,
+          'platform': 'mobile',
         },
       );
       return response.data['data'] as Map<String, dynamic>? ?? {};
@@ -144,6 +145,31 @@ class RegularClassService {
   Future<void> dropEnrollment(int enrollmentId) async {
     try {
       await _dio.delete(ApiConstants.dropEnrollment(enrollmentId));
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// POST /parent/payments/class/:id/pay
+  Future<Map<String, dynamic>> payClassInvoice(int paymentId,
+      {String paymentMethod = 'stripe'}) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.payClassInvoice(paymentId),
+        data: {'paymentMethod': paymentMethod},
+      );
+      return response.data['data'] as Map<String, dynamic>? ?? {};
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// GET /parent/settings/registration-fee?classType=class
+  Future<Map<String, dynamic>> getRegistrationFee() async {
+    try {
+      final response = await _dio.get(ApiConstants.registrationFee,
+          queryParameters: {'classType': 'class'});
+      return response.data['data'] as Map<String, dynamic>? ?? {};
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
     }

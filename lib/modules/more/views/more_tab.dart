@@ -13,7 +13,7 @@ class MoreTab extends GetView<MoreController> {
   @override
   Widget build(BuildContext context) {
     final menuItems = [
-      _MenuItem(Icons.family_restroom, 'Family & Dancers', AppRoutes.family),
+      //_MenuItem(Icons.family_restroom, 'Family & Dancers', AppRoutes.family),
       _MenuItem(Icons.music_note, 'Routines', AppRoutes.routines),
       _MenuItem(Icons.spa, 'Wellness', AppRoutes.wellness),
       _MenuItem(Icons.trending_up, 'Student Progress', AppRoutes.studentProgress),
@@ -27,7 +27,7 @@ class MoreTab extends GetView<MoreController> {
       _MenuItem(Icons.person_outline, 'Student Profile', AppRoutes.studentProfile),
       _MenuItem(Icons.settings_outlined, 'Settings', AppRoutes.settings),
       _MenuItem(Icons.campaign_outlined, 'Announcements', AppRoutes.announcements),
-      _MenuItem(Icons.calendar_month, 'Full Class Schedule', AppRoutes.classSchedule),
+      //_MenuItem(Icons.calendar_month, 'Full Class Schedule', AppRoutes.classSchedule),
     ];
 
     return Scaffold(

@@ -1,6 +1,7 @@
 import 'package:catalyst/app/routes/app_pages.dart';
 import 'package:catalyst/core/network/api_client.dart';
 import 'package:catalyst/core/services/fcm_service.dart';
+import 'package:catalyst/core/services/stripe_payment_service.dart';
 import 'package:catalyst/data/services/storage_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +10,9 @@ import 'package:get/get.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Stripe
+  StripePaymentService.instance.init();
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(

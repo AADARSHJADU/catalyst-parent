@@ -22,6 +22,12 @@ import 'package:catalyst/modules/regular_classes/bindings/regular_classes_bindin
 import 'package:catalyst/modules/regular_classes/views/regular_classes_view.dart';
 import 'package:catalyst/modules/choreography/bindings/choreography_binding.dart';
 import 'package:catalyst/modules/choreography/views/choreography_view.dart';
+import 'package:catalyst/modules/wellness_new/bindings/wellness_new_binding.dart';
+import 'package:catalyst/modules/wellness_new/views/wellness_new_view.dart';
+import 'package:catalyst/modules/routines_new/bindings/routines_new_binding.dart';
+import 'package:catalyst/modules/routines_new/views/routines_new_view.dart';
+import 'package:catalyst/modules/competitions_new/bindings/competitions_new_binding.dart';
+import 'package:catalyst/modules/competitions_new/views/competitions_new_view.dart';
 import 'package:catalyst/modules/messages/bindings/messages_binding.dart';
 import 'package:catalyst/modules/messages/views/chat_view.dart';
 import 'package:catalyst/modules/messages/views/group_info_view.dart';
@@ -178,7 +184,8 @@ class AppPages {
     ),
     GetPage(
       name: AppRoutes.competitions,
-      page: () => const CompetitionsView(),
+      page: () => const CompetitionsNewView(),
+      binding: CompetitionsNewBinding(),
     ),
     GetPage(
       name: AppRoutes.documents,
@@ -192,8 +199,8 @@ class AppPages {
     ),
     GetPage(
       name: AppRoutes.routines,
-      page: () => const RoutinesListView(),
-      binding: RoutinesBinding(),
+      page: () => const RoutinesNewView(),
+      binding: RoutinesNewBinding(),
     ),
     GetPage(
       name: AppRoutes.routineDetail,
@@ -232,8 +239,8 @@ class AppPages {
     ),
     GetPage(
       name: AppRoutes.wellness,
-      page: () => const WellnessMainView(),
-      binding: WellnessBinding(),
+      page: () => const WellnessNewView(),
+      binding: WellnessNewBinding(),
     ),
     GetPage(
       name: AppRoutes.wellnessCheckout,
