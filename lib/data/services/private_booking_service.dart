@@ -182,4 +182,15 @@ class PrivateBookingService {
       throw ApiException.fromDio(e);
     }
   }
+
+  /// GET /parent/settings/registration-fee?classType=private_class
+  Future<Map<String, dynamic>> getRegistrationFee() async {
+    try {
+      final response = await _dio.get(ApiConstants.registrationFee,
+          queryParameters: {'classType': 'private_class'});
+      return response.data['data'] as Map<String, dynamic>? ?? {};
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
 }

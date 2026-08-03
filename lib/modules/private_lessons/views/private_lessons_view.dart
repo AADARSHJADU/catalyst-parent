@@ -950,26 +950,75 @@ class _BookingFormPage extends GetView<PrivateLessonsController> {
           Obx(() {
             final price = controller.calculatedPrice.value;
             if (price == null) return const SizedBox.shrink();
-            final total = price['totalCost'] ?? price['baseRate'] ?? 0;
+            final baseRate = double.tryParse(
+                    price['baseRate']?.toString() ??
+                        price['calculatedPrice']?.toString() ??
+                        price['totalCost']?.toString() ??
+                        '0') ?? 0;
+
+            // Registration fee breakdown
+            final regFee = controller.registrationFee.value;
+            final feeComponents = <String, double>{};
+            double regTotal = 0;
+            if (regFee != null) {
+              final comp = regFee['feeComponents'];
+              if (comp is Map) {
+                comp.forEach((k, v) {
+                  final amount = double.tryParse(v.toString()) ?? 0;
+                  feeComponents[k.toString()] = amount;
+                  regTotal += amount;
+                });
+              } else if (comp is List) {
+                for (final c in comp) {
+                  final name = c['name']?.toString() ?? 'Fee';
+                  final amount = double.tryParse(c['amount']?.toString() ?? '0') ?? 0;
+                  feeComponents[name] = amount;
+                  regTotal += amount;
+                }
+              } else {
+                regTotal = double.tryParse(regFee['totalAmount']?.toString() ?? '0') ?? 0;
+                if (regTotal > 0) feeComponents['Registration Fee'] = regTotal;
+              }
+            }
+
+            final grandTotal = baseRate + regTotal;
+
             return Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.success.withValues(alpha: 0.08),
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                    color: AppColors.success.withValues(alpha: 0.3)),
+                border: Border.all(color: AppColors.border),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Estimated Cost',
+                  const Text('Payment Summary',
                       style: TextStyle(
-                          color: AppColors.textPrimary, fontSize: 14)),
-                  Text('\$${(total as num).toStringAsFixed(2)}',
-                      style: const TextStyle(
-                          color: AppColors.success,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold)),
+                          color: AppColors.textPrimary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  _buildFeeRow('Base Lesson Rate (${controller.selectedDuration.value} min)',
+                      '\$${baseRate.toStringAsFixed(2)}'),
+                  ...feeComponents.entries.map((e) =>
+                      _buildFeeRow(e.key, '\$${e.value.toStringAsFixed(2)}')),
+                  const Divider(color: AppColors.border, height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Grand Total',
+                          style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold)),
+                      Text('\$${grandTotal.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                              color: AppColors.success,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold)),
+                    ],
+                  ),
                 ],
               ),
             );
@@ -1012,6 +1061,21 @@ class _BookingFormPage extends GetView<PrivateLessonsController> {
                 ),
               )),
           const SizedBox(height: 30),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeeRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(child: Text(label,
+              style: const TextStyle(color: AppColors.textMuted, fontSize: 12))),
+          Text(value,
+              style: const TextStyle(color: AppColors.textPrimary, fontSize: 12)),
         ],
       ),
     );

@@ -1,5 +1,6 @@
 import 'package:catalyst/core/constants/app_colors.dart';
 import 'package:catalyst/core/network/api_exception.dart';
+import 'package:catalyst/core/services/stripe_payment_service.dart';
 import 'package:catalyst/data/services/choreography_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -12,6 +13,7 @@ class ChoreographyController extends GetxController {
   final errorMessage = ''.obs;
   final choreographies = <Map<String, dynamic>>[].obs;
   final students = <Map<String, dynamic>>[].obs;
+  final registrationFee = Rxn<Map<String, dynamic>>();
   final isBooking = false.obs;
 
   // ── Filters ────────────────────────────────────────────────────────────
@@ -61,6 +63,27 @@ class ChoreographyController extends GetxController {
     }).toList();
   }
 
+  // ── Fee Helpers ────────────────────────────────────────────────────────
+  double get regFeeTotal {
+    final fee = registrationFee.value;
+    if (fee == null) return 0;
+    final comp = fee['feeComponents'];
+    if (comp is Map) {
+      return comp.values.fold<double>(0, (s, v) => s + (double.tryParse(v.toString()) ?? 0));
+    }
+    return double.tryParse(fee['totalAmount']?.toString() ?? '0') ?? 0;
+  }
+
+  Map<String, double> get feeComponentsMap {
+    final fee = registrationFee.value;
+    if (fee == null) return {};
+    final comp = fee['feeComponents'];
+    if (comp is Map) {
+      return comp.map((k, v) => MapEntry(k.toString(), double.tryParse(v.toString()) ?? 0));
+    }
+    return {};
+  }
+
   @override
   void onInit() {
     super.onInit();
@@ -74,9 +97,11 @@ class ChoreographyController extends GetxController {
       final results = await Future.wait([
         _service.getMyChoreographies(),
         _service.getStudents(),
+        _service.getRegistrationFee(),
       ]);
       choreographies.value = results[0] as List<Map<String, dynamic>>;
       students.value = results[1] as List<Map<String, dynamic>>;
+      registrationFee.value = results[2] as Map<String, dynamic>;
     } on ApiException catch (e) {
       errorMessage.value = e.message;
     } catch (_) {
@@ -100,16 +125,35 @@ class ChoreographyController extends GetxController {
         studentId: studentId,
         paymentMethod: 'stripe',
       );
+      final clientSecret = data['clientSecret']?.toString() ?? '';
       final approvalUrl = data['approvalUrl']?.toString() ?? '';
-      if (approvalUrl.isNotEmpty) {
+      final paymentId = data['paymentId'] as int?;
+      final gatewayOrderId = data['gatewayOrderId']?.toString() ?? '';
+
+      if (clientSecret.isNotEmpty) {
+        // In-app Stripe Payment Sheet
+        final success = await StripePaymentService.instance
+            .presentPaymentSheet(clientSecret: clientSecret);
+        if (success && paymentId != null) {
+          // Capture on backend
+          await _service.capture(
+            paymentId: paymentId,
+            gatewayOrderId: gatewayOrderId,
+            paymentMethod: 'stripe',
+          );
+          await refresh();
+          Future.delayed(const Duration(milliseconds: 300), () {
+            Get.snackbar('Success', 'Choreography payment confirmed!',
+                snackPosition: SnackPosition.BOTTOM,
+                backgroundColor: AppColors.success, colorText: Colors.white);
+          });
+        }
+      } else if (approvalUrl.isNotEmpty) {
         final uri = Uri.parse(approvalUrl);
         if (await canLaunchUrl(uri)) {
           await launchUrl(uri, mode: LaunchMode.externalApplication);
         }
         Future.delayed(const Duration(seconds: 3), () => refresh());
-      } else {
-        Get.snackbar('Info', 'Payment session created.',
-            snackPosition: SnackPosition.BOTTOM);
       }
     } on ApiException catch (e) {
       Get.snackbar('Error', e.message,

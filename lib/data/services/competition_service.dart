@@ -75,10 +75,30 @@ class CompetitionService {
     int? studentId,
   }) async {
     try {
-      final body = <String, dynamic>{'paymentMethod': paymentMethod};
+      final body = <String, dynamic>{
+        'paymentMethod': paymentMethod,
+        'platform': 'mobile',
+      };
       if (studentId != null) body['studentId'] = studentId;
       final response = await _dio.post(
           ApiConstants.competitionPayment(id), data: body);
+      return response.data['data'] as Map<String, dynamic>? ?? {};
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// POST /parent/payments/capture
+  Future<Map<String, dynamic>> capturePayment({
+    required String orderId,
+    required int paymentId,
+  }) async {
+    try {
+      final response = await _dio.post(ApiConstants.paymentsCapture, data: {
+        'orderId': orderId,
+        'paymentType': 'competition',
+        'paymentId': paymentId,
+      });
       return response.data['data'] as Map<String, dynamic>? ?? {};
     } on DioException catch (e) {
       throw ApiException.fromDio(e);

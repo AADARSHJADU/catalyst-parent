@@ -27,6 +27,7 @@ class ChoreographyService {
         'choreographyId': choreographyId,
         'studentId': studentId,
         'paymentMethod': paymentMethod,
+        'platform': 'mobile',
       });
       return response.data['data'] as Map<String, dynamic>? ?? {};
     } on DioException catch (e) {
@@ -72,6 +73,17 @@ class ChoreographyService {
       final data = response.data['data'];
       if (data is List) return List<Map<String, dynamic>>.from(data);
       return [];
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// GET /parent/settings/registration-fee?classType=choreography_class
+  Future<Map<String, dynamic>> getRegistrationFee() async {
+    try {
+      final response = await _dio.get(ApiConstants.registrationFee,
+          queryParameters: {'classType': 'choreography_class'});
+      return response.data['data'] as Map<String, dynamic>? ?? {};
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
     }

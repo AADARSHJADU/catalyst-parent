@@ -38,6 +38,7 @@ class PrivateLessonsController extends GetxController {
   final availableSlots = <String>[].obs;
   final isLoadingSlots = false.obs;
   final calculatedPrice = Rxn<Map<String, dynamic>>();
+  final registrationFee = Rxn<Map<String, dynamic>>();
   final isSubmitting = false.obs;
 
   // ── Tab ────────────────────────────────────────────────────────────────
@@ -58,11 +59,13 @@ class PrivateLessonsController extends GetxController {
         _service.getDanceStyles(),
         _service.getStudents(),
         _service.getMyBookings(),
+        _service.getRegistrationFee(),
       ]);
       instructors.value = results[0] as List<Map<String, dynamic>>;
       danceStyles.value = results[1] as List<Map<String, dynamic>>;
       students.value = results[2] as List<Map<String, dynamic>>;
       myBookings.value = results[3] as List<Map<String, dynamic>>;
+      registrationFee.value = results[4] as Map<String, dynamic>;
     } on ApiException catch (e) {
       errorMessage.value = e.message;
     } catch (_) {
@@ -224,6 +227,8 @@ class PrivateLessonsController extends GetxController {
   void selectInstructorForBooking(Map<String, dynamic> instructor) {
     selectedInstructor.value = instructor;
     resetBookingForm();
+    // Auto-calculate price for default duration
+    calculatePrice();
   }
 
   // ── Pay for approved lesson ──────────────────────────────────────────────

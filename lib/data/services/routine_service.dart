@@ -59,8 +59,25 @@ class RoutineService {
     try {
       final response = await _dio.post(
         ApiConstants.routinePayment(paymentId),
-        data: {'paymentMethod': paymentMethod},
+        data: {'paymentMethod': paymentMethod, 'platform': 'mobile'},
       );
+      return response.data['data'] as Map<String, dynamic>? ?? {};
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// POST /parent/payments/capture
+  Future<Map<String, dynamic>> capturePayment({
+    required String orderId,
+    required int paymentId,
+  }) async {
+    try {
+      final response = await _dio.post(ApiConstants.paymentsCapture, data: {
+        'orderId': orderId,
+        'paymentType': 'routine',
+        'paymentId': paymentId,
+      });
       return response.data['data'] as Map<String, dynamic>? ?? {};
     } on DioException catch (e) {
       throw ApiException.fromDio(e);

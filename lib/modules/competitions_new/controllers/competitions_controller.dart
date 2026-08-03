@@ -1,5 +1,6 @@
 import 'package:catalyst/core/constants/app_colors.dart';
 import 'package:catalyst/core/network/api_exception.dart';
+import 'package:catalyst/core/services/stripe_payment_service.dart';
 import 'package:catalyst/data/services/competition_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -86,8 +87,31 @@ class CompetitionsNewController extends GetxController {
     try {
       final result = await _service.payCompetition(id,
           paymentMethod: 'stripe', studentId: studentId);
+
+      final clientSecret = result['clientSecret']?.toString() ?? '';
       final approvalUrl = result['approvalUrl']?.toString() ?? '';
-      if (approvalUrl.isNotEmpty) {
+      final orderId = result['orderId']?.toString() ??
+          result['gatewayOrderId']?.toString() ??
+          result['paymentIntentId']?.toString() ?? '';
+
+      if (clientSecret.isNotEmpty) {
+        // In-app Stripe Payment Sheet
+        final success = await StripePaymentService.instance
+            .presentPaymentSheet(clientSecret: clientSecret);
+        if (success) {
+          // Capture on backend
+          try {
+            final paymentId = result['paymentId'] as int? ?? id;
+            await _service.capturePayment(orderId: orderId, paymentId: paymentId);
+          } catch (_) {}
+          await refresh();
+          Future.delayed(const Duration(milliseconds: 300), () {
+            Get.snackbar('Success', 'Competition registration confirmed!',
+                snackPosition: SnackPosition.BOTTOM,
+                backgroundColor: AppColors.success, colorText: Colors.white);
+          });
+        }
+      } else if (approvalUrl.isNotEmpty) {
         final uri = Uri.parse(approvalUrl);
         if (await canLaunchUrl(uri)) {
           await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -95,11 +119,9 @@ class CompetitionsNewController extends GetxController {
         Future.delayed(const Duration(seconds: 3), () => refresh());
       } else {
         await refresh();
-        Future.delayed(const Duration(milliseconds: 300), () {
-          Get.snackbar('Success', 'Competition payment processed!',
-              snackPosition: SnackPosition.BOTTOM,
-              backgroundColor: AppColors.success, colorText: Colors.white);
-        });
+        Get.snackbar('Success', 'Competition payment processed!',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: AppColors.success, colorText: Colors.white);
       }
     } on ApiException catch (e) {
       Get.snackbar('Error', e.message,

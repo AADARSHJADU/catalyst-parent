@@ -496,6 +496,28 @@ class _StudentPaymentRow extends GetView<ChoreographyController> {
   }
 
   void _showPayOptions(BuildContext context) {
+    // Base price from choreography (not amountDue which may already include fee)
+    final basePrice = double.tryParse(sMap['amountDue']?.toString() ?? '0') ??
+        double.tryParse(sMap['price']?.toString() ?? '0') ?? 0;
+    
+    // Get the choreography's own price (from parent card data)
+    // sMap comes from student payment entry — use choreography price from parent
+    final choreographyPrice = double.tryParse(
+        Get.find<ChoreographyController>()
+            .choreographies
+            .firstWhereOrNull((c) => c['id'] == choreographyId)?['price']
+            ?.toString() ?? '0') ?? 0;
+    
+    // Use choreography base price if available, else use amountDue
+    final baseFee = choreographyPrice > 0 ? choreographyPrice : basePrice;
+    
+    // Dynamic registration fee from API
+    final feeMap = controller.feeComponentsMap;
+    final regTotal = controller.regFeeTotal;
+    
+    // Grand Total = base choreography fee + registration/processing fees
+    final grandTotal = baseFee + regTotal;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.card,
@@ -508,15 +530,43 @@ class _StudentPaymentRow extends GetView<ChoreographyController> {
           children: [
             Text('Pay Choreography Fee',
                 style: Theme.of(context).textTheme.titleMedium),
-            if (sMap['amountDue'] != null) ...[
-              const SizedBox(height: 6),
-              Text(
-                  '\$${(sMap['amountDue'] as num).toStringAsFixed(2)}',
-                  style: const TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold)),
-            ],
+            const SizedBox(height: 12),
+            // Payment Summary
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Payment Summary',
+                      style: TextStyle(color: AppColors.textPrimary,
+                          fontSize: 12, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  _feeRow('Choreography Fee', '\$${baseFee.toStringAsFixed(2)}'),
+                  ...feeMap.entries.map((e) =>
+                      _feeRow(e.key, '\$${e.value.toStringAsFixed(2)}')),
+                  if (regTotal > 0) ...[
+                    const Divider(color: AppColors.border, height: 12),
+                  ],
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Grand Total',
+                          style: TextStyle(color: AppColors.textPrimary,
+                              fontSize: 14, fontWeight: FontWeight.bold)),
+                      Text('\$${grandTotal.toStringAsFixed(2)}',
+                          style: const TextStyle(color: AppColors.success,
+                              fontSize: 20, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 16),
             Obx(() => SizedBox(
                   width: double.infinity,
@@ -564,6 +614,21 @@ class _StudentPaymentRow extends GetView<ChoreographyController> {
             const SizedBox(height: 8),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _feeRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(child: Text(label,
+              style: const TextStyle(color: AppColors.textMuted, fontSize: 11))),
+          Text(value,
+              style: const TextStyle(color: AppColors.textPrimary, fontSize: 11)),
+        ],
       ),
     );
   }

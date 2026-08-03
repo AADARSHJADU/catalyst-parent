@@ -1,5 +1,6 @@
 import 'package:catalyst/core/constants/app_colors.dart';
 import 'package:catalyst/core/network/api_exception.dart';
+import 'package:catalyst/core/services/stripe_payment_service.dart';
 import 'package:catalyst/data/services/routine_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -115,8 +116,37 @@ class RoutinesNewController extends GetxController {
     try {
       final method = paymentMethods.isNotEmpty ? paymentMethods.first : 'stripe';
       final result = await _service.payRoutine(paymentId, paymentMethod: method);
+
+      print('💰 [ROUTINE PAY] Response: $result');
+
+      final clientSecret = result['clientSecret']?.toString() ?? '';
       final approvalUrl = result['approvalUrl']?.toString() ?? '';
-      if (approvalUrl.isNotEmpty) {
+      final orderId = result['orderId']?.toString() ??
+          result['paymentIntentId']?.toString() ?? '';
+
+      // Check clientSecret is actually valid (not "null" string)
+      final hasValidSecret = clientSecret.isNotEmpty &&
+          clientSecret != 'null' &&
+          clientSecret.contains('_secret_');
+
+      if (hasValidSecret) {
+        // In-app Stripe Payment Sheet
+        final success = await StripePaymentService.instance
+            .presentPaymentSheet(clientSecret: clientSecret);
+        if (success) {
+          try {
+            await _service.capturePayment(orderId: orderId, paymentId: paymentId);
+          } catch (_) {}
+          await refresh();
+          Future.delayed(const Duration(milliseconds: 300), () {
+            Get.snackbar('Success', 'Routine payment confirmed!',
+                snackPosition: SnackPosition.BOTTOM,
+                backgroundColor: AppColors.success, colorText: Colors.white);
+          });
+        }
+      } else if (approvalUrl.isNotEmpty) {
+        // This should NOT happen if backend returns clientSecret properly
+        print('⚠️ [ROUTINE PAY] clientSecret was empty! Got approvalUrl instead. Check backend.');
         final uri = Uri.parse(approvalUrl);
         if (await canLaunchUrl(uri)) {
           await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -127,15 +157,13 @@ class RoutinesNewController extends GetxController {
         Future.delayed(const Duration(milliseconds: 300), () {
           Get.snackbar('Success', 'Routine payment processed!',
               snackPosition: SnackPosition.BOTTOM,
-              backgroundColor: AppColors.success,
-              colorText: Colors.white);
+              backgroundColor: AppColors.success, colorText: Colors.white);
         });
       }
     } on ApiException catch (e) {
       Get.snackbar('Error', e.message,
           snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: AppColors.error,
-          colorText: Colors.white);
+          backgroundColor: AppColors.error, colorText: Colors.white);
     } finally {
       isPaying.value = false;
     }

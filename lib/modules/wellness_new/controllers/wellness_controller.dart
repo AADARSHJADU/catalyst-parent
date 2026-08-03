@@ -163,13 +163,35 @@ class WellnessNewController extends GetxController {
     try {
       final result = await _service.dropinCheckout(
           classId: classId, sessionDates: dates);
+      final clientSecret = result['clientSecret']?.toString() ?? '';
       final approvalUrl = result['approvalUrl']?.toString() ?? '';
-      if (approvalUrl.isNotEmpty) {
+      final orderId = result['orderId']?.toString() ?? '';
+
+      if (clientSecret.isNotEmpty) {
+        // In-app Stripe Payment Sheet
+        final success = await StripePaymentService.instance
+            .presentPaymentSheet(clientSecret: clientSecret);
+        if (success) {
+          // Confirm drop-in booking on backend
+          await _service.dropinConfirm(
+            classId: classId,
+            sessionDates: dates,
+            gateway: 'stripe',
+            dropInPrice: price,
+            orderId: orderId,
+          );
+          await refresh();
+          Future.delayed(const Duration(milliseconds: 300), () {
+            Get.snackbar('Booked!', 'Drop-in class confirmed.',
+                snackPosition: SnackPosition.BOTTOM,
+                backgroundColor: AppColors.success, colorText: Colors.white);
+          });
+        }
+      } else if (approvalUrl.isNotEmpty) {
         final uri = Uri.parse(approvalUrl);
         if (await canLaunchUrl(uri)) {
           await launchUrl(uri, mode: LaunchMode.externalApplication);
         }
-        // After return, confirm
         Future.delayed(const Duration(seconds: 3), () => refresh());
       }
     } on ApiException catch (e) {

@@ -55,6 +55,7 @@ class WellnessApiService {
         'classId': classId,
         'sessionDates': sessionDates,
         'gateway': gateway,
+        'platform': 'mobile',
       });
       return response.data['data'] as Map<String, dynamic>? ?? {};
     } on DioException catch (e) {
