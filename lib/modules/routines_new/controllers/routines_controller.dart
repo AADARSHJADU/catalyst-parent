@@ -82,13 +82,14 @@ class RoutinesNewController extends GetxController {
   // Fee calculation
   double getGrandTotal(Map<String, dynamic> routine) {
     final payment = routine['payment'] as Map<String, dynamic>? ?? {};
-    final baseFee =
-        double.tryParse(payment['amountDue']?.toString() ?? '0') ??
-            double.tryParse(
-                routine['routine']?['routineFee']?.toString() ?? '0') ??
-            0;
-    final extraTotal = _extraFeeTotal();
-    return baseFee + extraTotal;
+    // amountDue from API already includes registration fee (calculated by backend)
+    final amountDue = double.tryParse(payment['amountDue']?.toString() ?? '0') ?? 0;
+    if (amountDue > 0) return amountDue; // Use backend-calculated total directly
+    
+    // Fallback: calculate from routineFee + extra
+    final baseFee = double.tryParse(
+        routine['routine']?['routineFee']?.toString() ?? '0') ?? 0;
+    return baseFee + _extraFeeTotal();
   }
 
   double _extraFeeTotal() {
@@ -119,12 +120,15 @@ class RoutinesNewController extends GetxController {
 
       print('💰 [ROUTINE PAY] Response: $result');
 
-      final clientSecret = result['clientSecret']?.toString() ?? '';
+      // Doc says: transactionId contains the clientSecret (has _secret_ in it)
+      final clientSecret = result['clientSecret']?.toString() ??
+          result['transactionId']?.toString() ?? '';
       final approvalUrl = result['approvalUrl']?.toString() ?? '';
       final orderId = result['orderId']?.toString() ??
-          result['paymentIntentId']?.toString() ?? '';
+          result['paymentIntentId']?.toString() ??
+          result['transactionId']?.toString() ?? '';
 
-      // Check clientSecret is actually valid (not "null" string)
+      // Check clientSecret is actually valid
       final hasValidSecret = clientSecret.isNotEmpty &&
           clientSecret != 'null' &&
           clientSecret.contains('_secret_');
@@ -135,7 +139,8 @@ class RoutinesNewController extends GetxController {
             .presentPaymentSheet(clientSecret: clientSecret);
         if (success) {
           try {
-            await _service.capturePayment(orderId: orderId, paymentId: paymentId);
+            // For capture, use the full transactionId as orderId
+            await _service.capturePayment(orderId: clientSecret, paymentId: paymentId);
           } catch (_) {}
           await refresh();
           Future.delayed(const Duration(milliseconds: 300), () {

@@ -61,7 +61,16 @@ class RoutineService {
         ApiConstants.routinePayment(paymentId),
         data: {'paymentMethod': paymentMethod, 'platform': 'mobile'},
       );
-      return response.data['data'] as Map<String, dynamic>? ?? {};
+      // Response may have data wrapped or directly at top level
+      final responseData = response.data;
+      if (responseData is Map<String, dynamic>) {
+        if (responseData['data'] is Map<String, dynamic>) {
+          return responseData['data'] as Map<String, dynamic>;
+        }
+        // If no nested 'data', return the whole response (minus success/message)
+        return responseData;
+      }
+      return {};
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
     }

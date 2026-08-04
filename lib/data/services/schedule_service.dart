@@ -7,6 +7,7 @@ class ScheduleApiService {
   final Dio _dio = ApiClient.instance.dio;
 
   /// GET /parent/enrollment/my-enrollments
+  /// Returns: { regular: [...], choreography: [...], privateLessons: [...], routines: [...] }
   Future<Map<String, dynamic>> getMyEnrollments() async {
     try {
       final response = await _dio.get(ApiConstants.myEnrollments);
@@ -16,11 +17,12 @@ class ScheduleApiService {
     }
   }
 
-  /// GET /parent/schedule/wellness?limit=100&status=active
+  /// GET /parent/schedule/wellness?limit=100
+  /// Returns wellness classes list for schedule
   Future<List<Map<String, dynamic>>> getWellnessSchedule() async {
     try {
       final response = await _dio.get(ApiConstants.wellnessSchedule,
-          queryParameters: {'limit': 100, 'status': 'active'});
+          queryParameters: {'limit': 100});
       final data = response.data['data'];
       if (data is Map && data['classes'] is List) {
         return List<Map<String, dynamic>>.from(data['classes']);
@@ -48,18 +50,6 @@ class ScheduleApiService {
   Future<List<Map<String, dynamic>>> getStudios() async {
     try {
       final response = await _dio.get(ApiConstants.studiosList);
-      final data = response.data['data'];
-      if (data is List) return List<Map<String, dynamic>>.from(data);
-      return [];
-    } on DioException catch (e) {
-      throw ApiException.fromDio(e);
-    }
-  }
-
-  /// GET /parent/choreography-booking
-  Future<List<Map<String, dynamic>>> getChoreographies() async {
-    try {
-      final response = await _dio.get(ApiConstants.choreographyList);
       final data = response.data['data'];
       if (data is List) return List<Map<String, dynamic>>.from(data);
       return [];

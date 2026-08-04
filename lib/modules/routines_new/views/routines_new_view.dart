@@ -184,7 +184,7 @@ class _RoutineCard extends GetView<RoutinesNewController> {
     final grandTotal = controller.getGrandTotal(data);
 
     // Debug
-    print('🎵 [ROUTINE] name=$name payStatus=$payStatus paymentId=$paymentId isPaid=$isPaid');
+    print('🎵 [ROUTINE] name=$name payStatus=$payStatus paymentId=$paymentId isPaid=$isPaid amountDue=$amountDue fee=$fee grandTotal=$grandTotal');
 
     return AppCard(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -234,24 +234,32 @@ class _RoutineCard extends GetView<RoutinesNewController> {
           Expanded(child: Text(studentName, style: const TextStyle(color: AppColors.textPrimary, fontSize: 12))),
         ]),
 
-        // Fee breakdown
+        // Fee breakdown (only show what API returns)
         const SizedBox(height: 10),
         const Divider(color: AppColors.border),
         const SizedBox(height: 8),
+        // Base routine fee
         Row(children: [
           const Text('Routine Fee:', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
           const Spacer(),
           Text('\$$fee', style: const TextStyle(color: AppColors.textPrimary, fontSize: 12)),
         ]),
-        // Extra fees
-        ...controller.feeComponentsList.map((fc) => Padding(
-          padding: const EdgeInsets.only(top: 3),
-          child: Row(children: [
-            Text(fc['name']?.toString() ?? 'Fee', style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
-            const Spacer(),
-            Text('\$${_n(fc['amount'])}', style: const TextStyle(color: AppColors.textPrimary, fontSize: 12)),
-          ]),
-        )),
+        // If amountDue > routineFee, show the extra as registration fees
+        Builder(builder: (_) {
+          final baseFeeNum = double.tryParse(fee) ?? 0;
+          final extraAmount = grandTotal - baseFeeNum;
+          if (extraAmount > 0.01) {
+            return Padding(
+              padding: const EdgeInsets.only(top: 3),
+              child: Row(children: [
+                const Text('Registration & Processing Fees:', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                const Spacer(),
+                Text('\$${extraAmount.toStringAsFixed(2)}', style: const TextStyle(color: AppColors.textPrimary, fontSize: 12)),
+              ]),
+            );
+          }
+          return const SizedBox.shrink();
+        }),
         const SizedBox(height: 4),
         Row(children: [
           const Text('Grand Total:', style: TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w600)),

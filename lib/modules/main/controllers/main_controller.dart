@@ -1,5 +1,7 @@
 import 'package:catalyst/app/routes/app_routes.dart';
+import 'package:catalyst/core/constants/api_constants.dart';
 import 'package:catalyst/core/constants/app_colors.dart';
+import 'package:catalyst/core/network/api_client.dart';
 import 'package:catalyst/data/mock/mock_data.dart';
 import 'package:catalyst/data/models/models.dart';
 import 'package:catalyst/data/services/settings_service.dart';
@@ -15,11 +17,75 @@ class MainController extends GetxController {
 }
 
 class HomeController extends GetxController {
-  final user = MockData.currentUser;
-  final dancers = MockData.dancers;
-  final upcomingBookings = MockData.bookings.take(3).toList();
-  final unreadNotifications =
-      MockData.notifications.where((n) => !n.isRead).length;
+  final isLoading = true.obs;
+  final errorMessage = ''.obs;
+
+  // Dashboard data
+  final userName = ''.obs;
+  final userEmail = ''.obs;
+  final userProfilePic = ''.obs;
+
+  // Stats
+  final upcomingClassesCount = 0.obs;
+  final upcomingPrivateClassesCount = 0.obs;
+  final competitionRemindersCount = 0.obs;
+  final wellnessStatus = ''.obs;
+  final creditsRemaining = 0.obs;
+
+  // Lists
+  final upcomingClasses = <Map<String, dynamic>>[].obs;
+  final upcomingPrivateClasses = <Map<String, dynamic>>[].obs;
+  final competitions = <Map<String, dynamic>>[].obs;
+  final wellnessMembership = Rxn<Map<String, dynamic>>();
+
+  @override
+  void onInit() {
+    super.onInit();
+    fetchDashboard();
+  }
+
+  Future<void> fetchDashboard() async {
+    isLoading.value = true;
+    try {
+      final response = await ApiClient.instance.dio.get(ApiConstants.parentDashboard);
+      final data = response.data['data'] as Map<String, dynamic>? ?? {};
+
+      // User
+      final user = data['user'] as Map<String, dynamic>? ?? {};
+      userName.value = user['name']?.toString() ??
+          '${user['firstName'] ?? ''} ${user['lastName'] ?? ''}'.trim();
+      userEmail.value = user['email']?.toString() ?? '';
+      userProfilePic.value = user['profilePic']?.toString() ?? '';
+
+      // Stats
+      final stats = data['stats'] as Map<String, dynamic>? ?? {};
+      upcomingClassesCount.value =
+          (stats['upcomingClassesCount'] as num?)?.toInt() ?? 0;
+      upcomingPrivateClassesCount.value =
+          (stats['upcomingPrivateClassesCount'] as num?)?.toInt() ?? 0;
+      competitionRemindersCount.value =
+          (stats['competitionRemindersCount'] as num?)?.toInt() ?? 0;
+      wellnessStatus.value = stats['wellnessStatus']?.toString() ?? '';
+      creditsRemaining.value =
+          (stats['creditsRemaining'] as num?)?.toInt() ?? 0;
+
+      // Lists
+      upcomingClasses.value = List<Map<String, dynamic>>.from(
+          data['upcomingClasses'] ?? []);
+      upcomingPrivateClasses.value = List<Map<String, dynamic>>.from(
+          data['upcomingPrivateClasses'] ?? []);
+      competitions.value = List<Map<String, dynamic>>.from(
+          data['competitions'] ?? []);
+
+      final wellness = data['wellnessMembership'];
+      wellnessMembership.value =
+          wellness is Map<String, dynamic> ? wellness : null;
+    } catch (_) {
+      errorMessage.value = 'Failed to load dashboard.';
+    } finally {
+      isLoading.value = false;
+    }
+  }
 }
 
 class ScheduleController extends GetxController {

@@ -309,18 +309,24 @@ class _ScheduleCard extends GetView<ParentScheduleController> {
 
   Widget _classCard(BuildContext context) {
     final cls = item['class'] as Map<String, dynamic>? ?? {};
-    final name = cls['name']?.toString() ?? '';
+    final name = cls['className']?.toString() ?? cls['name']?.toString() ?? '';
     final instructor = cls['instructor']?['user'] ?? {};
     final instName = '${instructor['firstName'] ?? ''} ${instructor['lastName'] ?? ''}'.trim();
     final schedules = cls['schedules'] as List? ?? [];
-    final schedule = schedules.isNotEmpty ? schedules.first as Map<String, dynamic> : {};
-    final startTime = controller.formatTime24to12(schedule['startTime']?.toString());
-    final endTime = controller.formatTime24to12(schedule['endTime']?.toString());
-    final room = cls['room']?['name']?.toString() ?? '';
+    String startTime = '';
+    String endTime = '';
+    if (schedules.isNotEmpty) {
+      final schedule = schedules.first as Map<String, dynamic>;
+      startTime = controller.formatTime24to12(schedule['startTime']?.toString());
+      endTime = controller.formatTime24to12(schedule['endTime']?.toString());
+    }
+    final room = cls['room']?['room_name']?.toString() ?? cls['room']?['name']?.toString() ?? '';
     final studio = cls['room']?['studio']?['name']?.toString() ?? '';
     final student = item['student'] as Map<String, dynamic>? ?? {};
-    final studentName = '${student['first_name'] ?? ''} ${student['last_name'] ?? ''}'.trim();
+    final studentName = '${student['firstName'] ?? student['first_name'] ?? ''} ${student['lastName'] ?? student['last_name'] ?? ''}'.trim();
     final isCompleted = item['_isCompleted'] == true;
+    final danceType = cls['danceType']?['name']?.toString() ?? '';
+    final skillLevel = cls['skillLevel']?['name']?.toString() ?? '';
 
     return GestureDetector(
       onTap: () => Get.to(() => _ClassDetailSheet(item: item, controller: controller)),
@@ -328,12 +334,14 @@ class _ScheduleCard extends GetView<ParentScheduleController> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Column(children: [
-              Text(startTime, style: const TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w600)),
-              const Text('to', style: TextStyle(color: AppColors.textMuted, fontSize: 9)),
-              Text(endTime, style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
-            ]),
-            const SizedBox(width: 12),
+            if (startTime.isNotEmpty) ...[
+              Column(children: [
+                Text(startTime, style: const TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w600)),
+                const Text('to', style: TextStyle(color: AppColors.textMuted, fontSize: 9)),
+                Text(endTime, style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+              ]),
+              const SizedBox(width: 12),
+            ],
             Container(width: 3, height: 50, decoration: BoxDecoration(
               color: isCompleted ? AppColors.info : AppColors.primary,
               borderRadius: BorderRadius.circular(2))),
@@ -348,13 +356,14 @@ class _ScheduleCard extends GetView<ParentScheduleController> {
                     decoration: BoxDecoration(
                       color: (isCompleted ? AppColors.info : AppColors.primary).withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(4)),
-                    child: Text(isCompleted ? 'Completed' : 'Regular Class',
+                    child: Text(isCompleted ? 'Completed' : 'Regular',
                         style: TextStyle(color: isCompleted ? AppColors.info : AppColors.primary, fontSize: 9)),
                   ),
                 ]),
                 const SizedBox(height: 4),
                 if (instName.isNotEmpty) _row(Icons.person_outline, instName),
-                if (room.isNotEmpty) _row(Icons.location_on_outlined, '$room, $studio'),
+                if (room.isNotEmpty) _row(Icons.location_on_outlined, '$room${studio.isNotEmpty ? ', $studio' : ''}'),
+                if (danceType.isNotEmpty) _row(Icons.category_outlined, '$danceType${skillLevel.isNotEmpty ? ' • $skillLevel' : ''}'),
                 if (studentName.isNotEmpty) _row(Icons.child_care, studentName),
               ],
             )),
@@ -372,16 +381,20 @@ class _ScheduleCard extends GetView<ParentScheduleController> {
     final endTime = controller.formatTime24to12(lesson['endTime']?.toString());
     final studio = lesson['studio']?['name']?.toString() ?? '';
     final student = item['student'] as Map<String, dynamic>? ?? {};
-    final studentName = '${student['first_name'] ?? ''} ${student['last_name'] ?? ''}'.trim();
+    final studentName = '${student['firstName'] ?? student['first_name'] ?? ''} ${student['lastName'] ?? student['last_name'] ?? ''}'.trim();
+    final price = lesson['price']?.toString() ?? '';
+    final payStatus = item['payment']?['paymentStatus']?.toString() ?? '';
 
     return AppCard(
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Column(children: [
-          Text(startTime, style: const TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w600)),
-          const Text('to', style: TextStyle(color: AppColors.textMuted, fontSize: 9)),
-          Text(endTime, style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
-        ]),
-        const SizedBox(width: 12),
+        if (startTime.isNotEmpty) ...[
+          Column(children: [
+            Text(startTime, style: const TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w600)),
+            const Text('to', style: TextStyle(color: AppColors.textMuted, fontSize: 9)),
+            Text(endTime, style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+          ]),
+          const SizedBox(width: 12),
+        ],
         Container(width: 3, height: 50, decoration: BoxDecoration(
           color: AppColors.success, borderRadius: BorderRadius.circular(2))),
         const SizedBox(width: 12),
@@ -391,13 +404,15 @@ class _ScheduleCard extends GetView<ParentScheduleController> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
-              child: const Text('Private', style: TextStyle(color: AppColors.success, fontSize: 9)),
+              child: Text(payStatus.isNotEmpty ? payStatus : 'Private',
+                  style: const TextStyle(color: AppColors.success, fontSize: 9)),
             ),
           ]),
           const SizedBox(height: 4),
           if (instName.isNotEmpty) _row(Icons.person_outline, instName),
           if (studio.isNotEmpty) _row(Icons.location_on_outlined, studio),
           if (studentName.isNotEmpty) _row(Icons.child_care, studentName),
+          if (price.isNotEmpty) _row(Icons.attach_money, '\$$price'),
         ])),
       ]),
     );
@@ -441,12 +456,20 @@ class _ScheduleCard extends GetView<ParentScheduleController> {
   }
 
   Widget _choreographyCard(BuildContext context) {
-    final name = item['className']?.toString() ?? item['choreographyName']?.toString() ?? '';
-    final studio = item['studio']?['name']?.toString() ?? '';
+    final choreo = item['choreography'] as Map<String, dynamic>? ?? item;
+    final name = choreo['className']?.toString() ?? choreo['name']?.toString() ?? '';
+    final studio = choreo['studio']?['name']?.toString() ?? '';
+    final instructor = choreo['instructor']?['user'] ?? {};
+    final instName = '${instructor['firstName'] ?? ''} ${instructor['lastName'] ?? ''}'.trim();
+    final startDate = choreo['startDate']?.toString() ?? '';
+    final endDate = choreo['endDate']?.toString() ?? '';
+    final price = choreo['price']?.toString() ?? '';
+    final student = item['student'] as Map<String, dynamic>? ?? {};
+    final studentName = '${student['firstName'] ?? student['first_name'] ?? ''} ${student['lastName'] ?? student['last_name'] ?? ''}'.trim();
 
     return AppCard(
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Container(width: 3, height: 40, margin: const EdgeInsets.only(right: 12),
+        Container(width: 3, height: 50, margin: const EdgeInsets.only(right: 12),
           decoration: BoxDecoration(color: AppColors.warning, borderRadius: BorderRadius.circular(2))),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
@@ -457,23 +480,50 @@ class _ScheduleCard extends GetView<ParentScheduleController> {
               child: const Text('Choreography', style: TextStyle(color: AppColors.warning, fontSize: 9)),
             ),
           ]),
+          const SizedBox(height: 4),
+          if (instName.isNotEmpty) _row(Icons.person_outline, instName),
           if (studio.isNotEmpty) _row(Icons.location_on_outlined, studio),
+          if (startDate.isNotEmpty) _row(Icons.date_range, '$startDate → $endDate'),
+          if (studentName.isNotEmpty) _row(Icons.child_care, studentName),
+          if (price.isNotEmpty) _row(Icons.attach_money, '\$$price'),
         ])),
       ]),
     );
   }
 
   Widget _routineCard(BuildContext context) {
+    final routine = item['routine'] as Map<String, dynamic>? ?? {};
+    final name = routine['name']?.toString() ?? 'Routine Session';
+    final instructor = routine['instructor']?['user'] ?? {};
+    final instName = '${instructor['firstName'] ?? ''} ${instructor['lastName'] ?? ''}'.trim();
+    final room = routine['room']?['room_name']?.toString() ?? routine['room']?['name']?.toString() ?? '';
+    final studio = routine['room']?['studio']?['name']?.toString() ?? '';
+    final student = item['student'] as Map<String, dynamic>? ?? {};
+    final studentName = '${student['firstName'] ?? student['first_name'] ?? ''} ${student['lastName'] ?? student['last_name'] ?? ''}'.trim();
+    final payStatus = item['payment']?['paymentStatus']?.toString() ?? '';
+    final isPaid = payStatus.toLowerCase() == 'paid';
+
     return AppCard(
-      child: Row(children: [
-        Container(width: 3, height: 30, margin: const EdgeInsets.only(right: 12),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Container(width: 3, height: 50, margin: const EdgeInsets.only(right: 12),
           decoration: BoxDecoration(color: AppColors.info, borderRadius: BorderRadius.circular(2))),
-        const Expanded(child: Text('Routine Session', style: TextStyle(color: AppColors.textPrimary, fontSize: 13))),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(color: AppColors.info.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
-          child: const Text('Routine', style: TextStyle(color: AppColors.info, fontSize: 9)),
-        ),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Expanded(child: Text(name, style: Theme.of(context).textTheme.titleSmall)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: (isPaid ? AppColors.success : AppColors.info).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(4)),
+              child: Text(isPaid ? 'Paid' : 'Routine',
+                  style: TextStyle(color: isPaid ? AppColors.success : AppColors.info, fontSize: 9)),
+            ),
+          ]),
+          const SizedBox(height: 4),
+          if (instName.isNotEmpty) _row(Icons.person_outline, instName),
+          if (room.isNotEmpty) _row(Icons.location_on_outlined, '$room${studio.isNotEmpty ? ', $studio' : ''}'),
+          if (studentName.isNotEmpty) _row(Icons.child_care, studentName),
+        ])),
       ]),
     );
   }
@@ -501,12 +551,12 @@ class _ClassDetailSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cls = item['class'] as Map<String, dynamic>? ?? {};
-    final name = cls['name']?.toString() ?? 'Class';
+    final name = cls['className']?.toString() ?? cls['name']?.toString() ?? 'Class';
     final programType = cls['programType']?.toString() ?? '';
     final description = cls['description']?.toString() ?? '';
-    final level = cls['level']?.toString() ?? '';
-    final danceStyle = cls['danceStyle']?.toString() ?? '';
-    final ageGroup = cls['ageGroup']?.toString() ?? '';
+    final level = cls['skillLevel']?['name']?.toString() ?? cls['level']?.toString() ?? '';
+    final danceStyle = cls['danceType']?['name']?.toString() ?? cls['danceStyle']?.toString() ?? '';
+    final ageGroup = cls['ageGroup']?['name']?.toString() ?? cls['ageGroup']?.toString() ?? '';
     final capacity = cls['capacity']?.toString() ?? '';
     final billingType = cls['billingType']?.toString() ?? '';
     final monthlyPrice = cls['monthlyPrice'];
@@ -516,13 +566,13 @@ class _ClassDetailSheet extends StatelessWidget {
     final instEmail = instructor['email']?.toString() ?? '';
     final instPhone = instructor['phone']?.toString() ?? '';
     final room = cls['room'] as Map<String, dynamic>? ?? {};
-    final roomName = room['name']?.toString() ?? room['room_name']?.toString() ?? '';
+    final roomName = room['room_name']?.toString() ?? room['name']?.toString() ?? '';
     final studio = room['studio'] as Map<String, dynamic>? ?? {};
     final studioName = studio['name']?.toString() ?? '';
     final studioAddress = studio['address']?.toString() ?? '';
     final schedules = cls['schedules'] as List? ?? [];
     final student = item['student'] as Map<String, dynamic>? ?? {};
-    final studentName = '${student['first_name'] ?? student['firstName'] ?? ''} ${student['last_name'] ?? student['lastName'] ?? ''}'.trim();
+    final studentName = '${student['firstName'] ?? student['first_name'] ?? ''} ${student['lastName'] ?? student['last_name'] ?? ''}'.trim();
     final joiningDate = item['joiningDate']?.toString() ?? '';
     final enrollmentId = item['id']?.toString() ?? '';
     final isCompleted = item['_isCompleted'] == true;
@@ -532,13 +582,20 @@ class _ClassDetailSheet extends StatelessWidget {
     if (schedules.isNotEmpty) {
       final s = schedules.first as Map<String, dynamic>;
       final days = <String>[];
-      if (s['monday'] == true) days.add('Mon');
-      if (s['tuesday'] == true) days.add('Tue');
-      if (s['wednesday'] == true) days.add('Wed');
-      if (s['thursday'] == true) days.add('Thu');
-      if (s['friday'] == true) days.add('Fri');
-      if (s['saturday'] == true) days.add('Sat');
-      if (s['sunday'] == true) days.add('Sun');
+      // Check dayOfWeek field from API
+      final dayOfWeek = s['dayOfWeek']?.toString() ?? '';
+      if (dayOfWeek.isNotEmpty) {
+        days.add(dayOfWeek);
+      } else {
+        // Fallback: boolean fields
+        if (s['monday'] == true) days.add('Mon');
+        if (s['tuesday'] == true) days.add('Tue');
+        if (s['wednesday'] == true) days.add('Wed');
+        if (s['thursday'] == true) days.add('Thu');
+        if (s['friday'] == true) days.add('Fri');
+        if (s['saturday'] == true) days.add('Sat');
+        if (s['sunday'] == true) days.add('Sun');
+      }
       final startTime = controller.formatTime24to12(s['startTime']?.toString());
       final endTime = controller.formatTime24to12(s['endTime']?.toString());
       scheduleText = '${days.join(", ")} • $startTime - $endTime';

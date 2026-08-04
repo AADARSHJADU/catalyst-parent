@@ -3,7 +3,7 @@
 abstract class ApiConstants {
   ApiConstants._();
 
-  static const String baseUrl = 'http://192.168.1.27:8080/api/v1';
+  static const String baseUrl = 'http://192.168.1.14:8080/api/v1';
   //static const String baseUrl = 'https://darksalmon-dragonfly-928313.hostingersite.com/api/v1';
 
   // ── Auth ──────────────────────────────────────────────────────────────────
@@ -177,4 +177,7 @@ abstract class ApiConstants {
   // ── Timeouts ──────────────────────────────────────────────────────────────
   static const int connectTimeoutMs = 15000;
   static const int receiveTimeoutMs = 15000;
+
+  // ── Dashboard ─────────────────────────────────────────────────────────────
+  static const String parentDashboard = '/parent/dashboard';
 }

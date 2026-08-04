@@ -43,7 +43,6 @@ class ParentScheduleController extends GetxController {
         _service.getWellnessSchedule(),
         _service.getStudents(),
         _service.getStudios(),
-        _service.getChoreographies(),
       ]);
 
       final enrollData = results[0] as Map<String, dynamic>;
@@ -53,22 +52,16 @@ class ParentScheduleController extends GetxController {
           enrollData['privateLessons'] ?? []);
       routines.value = List<Map<String, dynamic>>.from(
           enrollData['routines'] ?? []);
+      choreographies.value = List<Map<String, dynamic>>.from(
+          enrollData['choreography'] ?? []);
       completedSessions.value = List<Map<String, dynamic>>.from(
           enrollData['completedSessions'] ?? []);
 
       wellnessClasses.value = results[1] as List<Map<String, dynamic>>;
       students.value = results[2] as List<Map<String, dynamic>>;
       studios.value = results[3] as List<Map<String, dynamic>>;
-      choreographies.value = results[4] as List<Map<String, dynamic>>;
 
-      print('📅 [SCHEDULE] Loaded: regular=${regularEnrollments.length} private=${privateLessons.length} wellness=${wellnessClasses.length} choreo=${choreographies.length}');
-      if (regularEnrollments.isNotEmpty) {
-        print('📅 [SCHEDULE] First class keys: ${regularEnrollments.first.keys.toList()}');
-        final cls = regularEnrollments.first['class'];
-        if (cls is Map) {
-          print('📅 [SCHEDULE] First class data name=${cls['name']} schedules=${cls['schedules']}');
-        }
-      }
+      print('📅 [SCHEDULE] Loaded: regular=${regularEnrollments.length} private=${privateLessons.length} wellness=${wellnessClasses.length} choreo=${choreographies.length} routines=${routines.length}');
     } on ApiException catch (e) {
       errorMessage.value = e.message;
     } catch (_) {
@@ -114,9 +107,6 @@ class ParentScheduleController extends GetxController {
     final weekday = DateFormat('EEEE').format(date).toLowerCase();
     final dateStr = DateFormat('yyyy-MM-dd').format(date);
 
-    // Debug
-    print('📅 [SCHEDULE] Filtering classes for date=$dateStr weekday=$weekday total=${regularEnrollments.length}');
-
     if (regularEnrollments.isEmpty) return [];
 
     final results = <Map<String, dynamic>>[];
@@ -127,16 +117,15 @@ class ParentScheduleController extends GetxController {
       }
       // Studio filter
       if (selectedStudioId.value != 'All') {
-        final studioId = e['class']?['room']?['studio']?['id']?.toString() ?? '';
+        final cls = e['class'] as Map<String, dynamic>? ?? {};
+        final studioId = cls['room']?['studio']?['id']?.toString() ?? '';
         if (studioId != selectedStudioId.value) continue;
       }
-      // Joining date check
-      final joining = e['joiningDate']?.toString() ?? '';
-      if (joining.isNotEmpty && dateStr.compareTo(joining) < 0) continue;
 
       // Schedule match — check if class runs on this weekday
-      final schedules = e['class']?['schedules'] as List? ?? [];
-      
+      final cls = e['class'] as Map<String, dynamic>? ?? {};
+      final schedules = cls['schedules'] as List? ?? [];
+
       bool matchesDay = false;
       if (schedules.isEmpty) {
         // No schedule data — show the class anyway (don't filter out)
@@ -148,11 +137,15 @@ class ParentScheduleController extends GetxController {
           final end = sMap['endDate']?.toString() ?? '';
           if (start.isNotEmpty && dateStr.compareTo(start) < 0) continue;
           if (end.isNotEmpty && dateStr.compareTo(end) > 0) continue;
-          
-          // Check weekday — try both full name and abbreviated
-          if (sMap[weekday] == true ||
-              sMap[weekday] == 1 ||
-              sMap['${weekday}s'] == true) { // e.g. "mondays"
+
+          // Check dayOfWeek field from API
+          final dayOfWeek = sMap['dayOfWeek']?.toString().toLowerCase() ?? '';
+          if (dayOfWeek == weekday) {
+            matchesDay = true;
+            break;
+          }
+          // Fallback: check boolean fields
+          if (sMap[weekday] == true || sMap[weekday] == 1) {
             matchesDay = true;
             break;
           }
@@ -161,15 +154,14 @@ class ParentScheduleController extends GetxController {
 
       if (matchesDay) {
         // Attach completed status
-        final classId = e['class']?['id'];
+        final classId = cls['id'];
         final isCompleted = completedSessions.any((cs) =>
             cs['classId'] == classId &&
             cs['sessionDate']?.toString() == dateStr);
         results.add({...e, '_isCompleted': isCompleted});
       }
     }
-    
-    print('📅 [SCHEDULE] Found ${results.length} classes for $weekday');
+
     return results;
   }
 
@@ -180,13 +172,11 @@ class ParentScheduleController extends GetxController {
       final lesson = e['lesson'] as Map<String, dynamic>? ?? {};
       final lessonDate = lesson['date']?.toString() ?? '';
       if (lessonDate != dateStr) return false;
-      final status = lesson['status']?.toString().toLowerCase() ?? '';
-      if (status != 'scheduled' && status != 'completed') return false;
-      final payStatus = e['payment']?['paymentStatus']?.toString().toLowerCase() ?? '';
-      if (payStatus != 'paid') return false;
+      // Student filter
       if (selectedStudentId.value != 'All') {
         if (e['studentId']?.toString() != selectedStudentId.value) return false;
       }
+      // Studio filter
       if (selectedStudioId.value != 'All') {
         final studioId = lesson['studio']?['id']?.toString() ?? '';
         if (studioId != selectedStudioId.value) return false;
@@ -211,20 +201,21 @@ class ParentScheduleController extends GetxController {
   // ── Choreography filter ────────────────────────────────────────────────
   List<Map<String, dynamic>> _filterChoreography() {
     final dateStr = DateFormat('yyyy-MM-dd').format(selectedDate.value);
-    return choreographies.where((c) {
-      final start = c['startDate']?.toString() ?? '';
-      final end = c['endDate']?.toString() ?? '';
+    return choreographies.where((e) {
+      final choreo = e['choreography'] as Map<String, dynamic>? ?? e;
+      final start = choreo['startDate']?.toString() ?? '';
+      final end = choreo['endDate']?.toString() ?? '';
+      // Show if current date is within the choreography date range
       if (start.isNotEmpty && dateStr.compareTo(start) < 0) return false;
       if (end.isNotEmpty && dateStr.compareTo(end) > 0) return false;
+      // Student filter
       if (selectedStudentId.value != 'All') {
-        final sList = c['students'] as List? ?? [];
-        if (!sList.any((s) =>
-            (s as Map)['studentId']?.toString() == selectedStudentId.value)) {
-          return false;
-        }
+        if (e['studentId']?.toString() != selectedStudentId.value) return false;
       }
+      // Studio filter
       if (selectedStudioId.value != 'All') {
-        if (c['studioId']?.toString() != selectedStudioId.value) return false;
+        final studioId = choreo['studio']?['id']?.toString() ?? '';
+        if (studioId != selectedStudioId.value) return false;
       }
       return true;
     }).toList();
@@ -232,10 +223,16 @@ class ParentScheduleController extends GetxController {
 
   // ── Routines filter ────────────────────────────────────────────────────
   List<Map<String, dynamic>> _filterRoutines() {
-    // Same logic as classes but for routines
     return routines.where((e) {
+      // Student filter
       if (selectedStudentId.value != 'All') {
         if (e['studentId']?.toString() != selectedStudentId.value) return false;
+      }
+      // Studio filter
+      if (selectedStudioId.value != 'All') {
+        final routine = e['routine'] as Map<String, dynamic>? ?? {};
+        final studioId = routine['room']?['studio']?['id']?.toString() ?? '';
+        if (studioId != selectedStudioId.value) return false;
       }
       return true;
     }).toList();

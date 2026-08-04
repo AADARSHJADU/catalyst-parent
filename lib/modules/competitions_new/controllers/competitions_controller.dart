@@ -88,21 +88,28 @@ class CompetitionsNewController extends GetxController {
       final result = await _service.payCompetition(id,
           paymentMethod: 'stripe', studentId: studentId);
 
-      final clientSecret = result['clientSecret']?.toString() ?? '';
+      print('💰 [COMPETITION PAY] Response: $result');
+
+      // Check clientSecret OR transactionId (API may return either)
+      final clientSecret = result['clientSecret']?.toString() ??
+          result['transactionId']?.toString() ?? '';
       final approvalUrl = result['approvalUrl']?.toString() ?? '';
       final orderId = result['orderId']?.toString() ??
-          result['gatewayOrderId']?.toString() ??
-          result['paymentIntentId']?.toString() ?? '';
+          result['paymentIntentId']?.toString() ??
+          result['transactionId']?.toString() ?? '';
 
-      if (clientSecret.isNotEmpty) {
+      final hasValidSecret = clientSecret.isNotEmpty &&
+          clientSecret != 'null' &&
+          clientSecret.contains('_secret_');
+
+      if (hasValidSecret) {
         // In-app Stripe Payment Sheet
         final success = await StripePaymentService.instance
             .presentPaymentSheet(clientSecret: clientSecret);
         if (success) {
-          // Capture on backend
           try {
             final paymentId = result['paymentId'] as int? ?? id;
-            await _service.capturePayment(orderId: orderId, paymentId: paymentId);
+            await _service.capturePayment(orderId: clientSecret, paymentId: paymentId);
           } catch (_) {}
           await refresh();
           Future.delayed(const Duration(milliseconds: 300), () {
@@ -111,17 +118,24 @@ class CompetitionsNewController extends GetxController {
                 backgroundColor: AppColors.success, colorText: Colors.white);
           });
         }
-      } else if (approvalUrl.isNotEmpty) {
+      } else if (approvalUrl.isNotEmpty && approvalUrl != 'null') {
+        print('⚠️ [COMPETITION PAY] No clientSecret, falling back to browser');
         final uri = Uri.parse(approvalUrl);
         if (await canLaunchUrl(uri)) {
           await launchUrl(uri, mode: LaunchMode.externalApplication);
         }
         Future.delayed(const Duration(seconds: 3), () => refresh());
       } else {
-        await refresh();
-        Get.snackbar('Success', 'Competition payment processed!',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: AppColors.success, colorText: Colors.white);
+        // status might already be "Paid" (backend auto-charged)
+        final status = result['status']?.toString().toLowerCase() ?? '';
+        if (status == 'paid') {
+          await refresh();
+          Future.delayed(const Duration(milliseconds: 300), () {
+            Get.snackbar('Success', 'Competition payment confirmed!',
+                snackPosition: SnackPosition.BOTTOM,
+                backgroundColor: AppColors.success, colorText: Colors.white);
+          });
+        }
       }
     } on ApiException catch (e) {
       Get.snackbar('Error', e.message,

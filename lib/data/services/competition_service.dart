@@ -80,9 +80,19 @@ class CompetitionService {
         'platform': 'mobile',
       };
       if (studentId != null) body['studentId'] = studentId;
+      print('📤 [COMP SERVICE] POST /payments/competition/$id/pay | Body: $body');
       final response = await _dio.post(
           ApiConstants.competitionPayment(id), data: body);
-      return response.data['data'] as Map<String, dynamic>? ?? {};
+      print('📥 [COMP SERVICE] Raw response.data: ${response.data}');
+      // Handle both nested and flat response
+      final responseData = response.data;
+      if (responseData is Map<String, dynamic>) {
+        if (responseData['data'] is Map<String, dynamic>) {
+          return responseData['data'] as Map<String, dynamic>;
+        }
+        return responseData;
+      }
+      return {};
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
     }

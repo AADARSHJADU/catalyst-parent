@@ -6,8 +6,7 @@ class StripePaymentService {
   StripePaymentService._();
   static final StripePaymentService instance = StripePaymentService._();
 
-  static const String _publishableKey =
-      'pk_test_51TEU3bRUR61owESQttkPiKVVjJHAHEF6h9JEmYM5wvJ1byUJCFu4P6hW8JziKnhfLVuxvz5RRz1igszZmZlEIOQC00sC75NC5J';
+  static const String _publishableKey = 'pk_test_51TJsTs2VBBFDtBvYRAQ46P3b5kZ22LTSTiAEWZiuGwKKYlUjq7wmhF3Nmudo4dlMR9lmnJfwCHa5SAB7MeaUDaK800BFliVq3D';
 
   bool _initialized = false;
 
